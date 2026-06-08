@@ -4,14 +4,19 @@
 	// (enregistrement en base, parcours) viendra avec l'espace élève + l'éditeur de parcours.
 	import RunnerFrame from '$components/runner/RunnerFrame.svelte';
 	import { ACTIVITIES, activityUrl } from '$lib/activities/catalog';
+	import { bridgeFor } from '$lib/activities/bridges';
 
 	function pickFromCatalog(e: Event) {
 		const id = (e.currentTarget as HTMLSelectElement).value;
 		const a = ACTIVITIES.find((x) => x.id === id);
-		if (a) url = activityUrl(a);
+		if (a) {
+			url = activityUrl(a);
+			source = a.source;
+		}
 	}
 
 	let url = $state('http://localhost:5173/');
+	let source = $state<string | undefined>(undefined);
 	let activity = $state('lesson:a');
 	let running = $state(false);
 	let events = $state<{ kind: string; payload: unknown }[]>([]);
@@ -62,6 +67,7 @@
 					params={{ activity, kind: 'graded', timeLimit: 120 }}
 					allowOrigin="*"
 					title="activité embarquée"
+					adapter={bridgeFor(source)}
 					onready={(p) => log('ready', p)}
 					onattempt={(p) => log('attempt', p)}
 					onprogress={(p) => log('progress', p)}

@@ -62,7 +62,9 @@ export interface ActivityMeta {
 		originProd?: string;
 		path: string; // ex GS : '/automaths/eleve/?ref=zefor974/01-retour-unite'
 		mode?: 'iframe' | 'newtab';
-		connector?: 'm974' | 'none';
+		// 'm974' = pont natif ; 'bridged' = on traduit le protocole maison de l'app
+		// (cf. $lib/activities/bridges) ; 'none' = se lance mais ne remonte rien.
+		connector?: 'm974' | 'none' | 'bridged';
 	};
 
 	// Rattachement taxonomique (spine GS). domaineKey TOUJOURS présent (repli 00-transversal).

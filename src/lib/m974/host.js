@@ -14,6 +14,10 @@
 //   act.command('pause');           // contrôle depuis le host (chrono, pause prof…)
 //   act.destroy();
 //
+// App tierce NON native (Tier 2 « bridged ») : passe un `adapter(data, origin)` qui
+// traduit SON protocole maison en AttemptResult — émis via le même event 'attempt' :
+//   mount(el, { url, allowOrigin: 'https://coopmaths.fr', adapter: mathaleaBridge });
+//
 // Pas de Math.random ici (compat resume) : id de session = compteur de séquence.
 
 import { MSG, VERSION, isM974Message, originAllowed, URL_SAFE_KEYS } from './protocol.js';
@@ -56,19 +60,35 @@ export function mount(container, opts = {}) {
 
   function onMessage(e) {
     if (e.source !== iframe.contentWindow) return;
-    if (!isM974Message(e.data)) return;
-    if (!originAllowed(e.origin, allow)) return;
-    childOrigin = e.origin;
-    const { type, payload } = e.data;
-    if (type === MSG.READY) {
-      sendLaunch();
-      emit('ready', payload);
-    } else if (type === MSG.ATTEMPT) {
-      emit('attempt', payload);
-    } else if (type === MSG.PROGRESS) {
-      emit('progress', payload);
-    } else if (type === MSG.EXIT) {
-      emit('exit', payload);
+    if (isM974Message(e.data)) {
+      if (!originAllowed(e.origin, allow)) return;
+      childOrigin = e.origin;
+      const { type, payload } = e.data;
+      if (type === MSG.READY) {
+        sendLaunch();
+        emit('ready', payload);
+      } else if (type === MSG.ATTEMPT) {
+        emit('attempt', payload);
+      } else if (type === MSG.PROGRESS) {
+        emit('progress', payload);
+      } else if (type === MSG.EXIT) {
+        emit('exit', payload);
+      }
+      return;
+    }
+    // Adaptateur « bridged » (Tier 2) : une app tierce NON native émet son PROPRE
+    // protocole (ex. MathALEA poste {action:'mathalea:score', resultsByExercice}).
+    // `opts.adapter(data, origin)` le traduit en AttemptResult (ou un tableau), sans
+    // jamais rien renvoyer à l'app. Gardé par la même allow-list d'origine.
+    if (opts.adapter && originAllowed(e.origin, allow)) {
+      let out;
+      try {
+        out = opts.adapter(e.data, e.origin);
+      } catch (err) {
+        console.error('[m974/host] adapter', err);
+        return;
+      }
+      if (out) for (const a of Array.isArray(out) ? out : [out]) emit('attempt', a);
     }
   }
   window.addEventListener('message', onMessage);

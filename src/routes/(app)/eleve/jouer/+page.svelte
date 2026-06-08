@@ -5,6 +5,7 @@
 	import { getSupabase } from '$lib/supabase/client';
 	import { session } from '$auth/session.svelte';
 	import { ACTIVITIES, activityUrl, type Activity } from '$lib/activities/catalog';
+	import { bridgeFor } from '$lib/activities/bridges';
 
 	let selected = $state<Activity | null>(null);
 	let saved = $state(0);
@@ -75,6 +76,7 @@
 			params={{ kind: selected.kind, studentKey: session.studentKey ?? undefined }}
 			allowOrigin="*"
 			title={selected.label}
+			adapter={bridgeFor(selected.source)}
 			onattempt={onAttempt}
 		/>
 	{/key}

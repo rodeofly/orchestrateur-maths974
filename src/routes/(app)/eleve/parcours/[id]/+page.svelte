@@ -8,6 +8,7 @@
 	import { getActivity, activityUrl, type Activity } from '$lib/activities/catalog';
 	import { normalizeSteps, getRituel, withRituelCompetences, type RituelType } from '$lib/activities/rituels';
 	import RunnerFrame from '$components/runner/RunnerFrame.svelte';
+	import { bridgeFor } from '$lib/activities/bridges';
 
 	const id = $derived(page.params.id ?? '');
 
@@ -102,6 +103,7 @@
 				allowOrigin="*"
 				title={current.label}
 				height="66vh"
+				adapter={bridgeFor(current.source)}
 				onattempt={onAttempt}
 			/>
 		{/key}

@@ -10,6 +10,7 @@
 		allowOrigin = '*',
 		title = 'activité',
 		height = '80vh',
+		adapter,
 		onready,
 		onattempt,
 		onprogress,
@@ -20,6 +21,9 @@
 		allowOrigin?: string | string[];
 		title?: string;
 		height?: string;
+		/** Adaptateur « bridged » (Tier 2) : traduit le protocole d'une app tierce en
+		 *  AttemptResult, relayé via onattempt. Cf. $lib/activities/bridges. */
+		adapter?: (data: unknown, origin: string) => unknown;
 		onready?: (p: unknown) => void;
 		onattempt?: (p: unknown) => void;
 		onprogress?: (p: unknown) => void;
@@ -30,7 +34,7 @@
 	let activity: { on: Function; command: Function; destroy: Function } | null = null;
 
 	onMount(() => {
-		activity = mount(container, { url, params, allowOrigin, title });
+		activity = mount(container, { url, params, allowOrigin, title, adapter });
 		if (onready) activity.on('ready', onready);
 		if (onattempt) activity.on('attempt', onattempt);
 		if (onprogress) activity.on('progress', onprogress);

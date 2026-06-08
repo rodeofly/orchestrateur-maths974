@@ -6,7 +6,28 @@ import type { ActivityMeta } from '../types';
 const FTOBE = 'https://ftobe-maths974.github.io';
 const RODEOFLY = 'https://rodeofly.github.io';
 
+// MathALEA (coopmaths) — exemple d'app TIERCE captée par PONT (Tier 2). Lancée avec
+// ?recorder=moodle, elle poste { action:'mathalea:score', resultsByExercice } : on le
+// traduit via l'adaptateur `mathalea` ($lib/activities/bridges). L'exercice ci-dessous est
+// un lien élève complet et valide ; la sélection d'exercices côté prof viendra ensuite.
+const MATHALEA_EXO =
+	'/alea/?uuid=5f115&id=6G8A-1&n=3&d=10&s=1&s2=1&s3=true&s4=1&i=1&cd=1&alea=WSYf&v=eleve&es=0111001&recorder=moodle&iframe=1';
+
 export const APP_ACTIVITIES: ActivityMeta[] = [
+	{
+		id: 'mathalea',
+		source: 'coopmaths',
+		label: 'MathALEA — exercices coopmaths',
+		emoji: '🎲',
+		description: 'Banque d’exercices aléatoires auto-corrigés (coopmaths). Réussites captées par pont.',
+		kind: 'graded',
+		support: 'quiz',
+		embed: { originProd: 'https://coopmaths.fr', path: MATHALEA_EXO, connector: 'bridged' },
+		taxo: { domaineKey: '00-transversal', domaineLabel: 'Transversal' },
+		competences: ['ca', 'ra'],
+		rituels: ['rapido', 'zefor', 'evaluation'],
+		keywords: ['coopmaths', 'mathalea', 'exercices', 'aléatoire', 'auto-correction', 'entraînement']
+	},
 	{
 		id: 'aljeb974',
 		source: 'aljeb974',

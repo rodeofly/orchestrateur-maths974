@@ -34,6 +34,7 @@ const config = {
 					'https://ftobe-maths974.github.io',
 					'https://rodeofly.github.io',
 					'https://automaths.maths974.fr',
+					'https://coopmaths.fr',
 					'http://localhost:5173',
 					'http://localhost:4173',
 					'http://localhost:4321'
