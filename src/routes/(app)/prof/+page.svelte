@@ -71,6 +71,7 @@
 					<span class="nom">{c.nom}</span>
 					{#if c.join_code}<span class="code">code : {c.join_code}</span>{/if}
 				</a>
+				<a class="prog" href={`${base}/prof/annee?class=${c.id}`} title="Progression de la classe">📅 Progression</a>
 			</li>
 		{/each}
 	</ul>
@@ -120,6 +121,21 @@
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
 		color: var(--text-muted);
+	}
+	.grid li {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+	.prog {
+		align-self: start;
+		text-decoration: none;
+		color: var(--role-accent);
+		font-weight: 600;
+		font-size: 0.85rem;
+	}
+	.prog:hover {
+		text-decoration: underline;
 	}
 	.err {
 		color: var(--danger);

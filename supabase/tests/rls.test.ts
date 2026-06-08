@@ -70,6 +70,7 @@ beforeAll(async () => {
 	await db.exec(mig('0005_parcours.sql'));
 	await db.exec(mig('0006_admin_management.sql'));
 	await db.exec(mig('0007_planification.sql'));
+	await db.exec(mig('0008_progression_par_classe.sql'));
 	await db.exec(`grant select, insert, update, delete on all tables in schema public to authenticated;`);
 
 	// Seed en superuser (RLS contournée).

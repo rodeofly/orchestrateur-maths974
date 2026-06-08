@@ -3,6 +3,7 @@
 	// Séquences → Séances (= parcours). Le prof voit sa progression « all-at-once » et
 	// organise tout par CRUD. RLS : author_id = auth.uid() (cf. 0007_planification).
 	import { base } from '$app/paths';
+	import { page } from '$app/state';
 	import { getSupabase } from '$lib/supabase/client';
 	import { session } from '$auth/session.svelte';
 
@@ -11,6 +12,11 @@
 	type Sequence = { id: string; periode_id: string; titre: string; ordre: number };
 	type Seance = { id: string; titre: string; sequence_id: string | null; ordre: number };
 
+	type Classe = { id: string; nom: string };
+	let classes = $state<Classe[]>([]);
+	let classId = $state<string>('');
+	const cls = $derived(classes.find((c) => c.id === classId) ?? null);
+
 	let annees = $state<Annee[]>([]);
 	let selId = $state<string>('');
 	let periodes = $state<Periode[]>([]);
@@ -18,6 +24,11 @@
 	let seances = $state<Seance[]>([]);
 	let loading = $state(true);
 	let err = $state('');
+
+	// Duplication de la progression vers une autre classe.
+	let dupTo = $state('');
+	let dupBusy = $state(false);
+	let dupMsg = $state('');
 
 	const sb = () => getSupabase();
 	const annee = $derived(annees.find((a) => a.id === selId) ?? null);
@@ -41,14 +52,21 @@
 		return groups;
 	});
 
-	async function loadAnnees() {
-		loading = true; err = '';
-		const { data, error } = await sb().from('annees_scolaires').select('id,label,date_debut,term_system,nb_semaines').order('created_at', { ascending: false });
-		if (error) err = error.message;
-		annees = (data ?? []) as Annee[];
-		if (annees.length && !selId) selId = annees[0].id;
+	async function loadClasses() {
+		const { data } = await sb().from('classes').select('id,nom').order('created_at');
+		classes = (data ?? []) as Classe[];
+		const wanted = page.url.searchParams.get('class');
+		classId = wanted && classes.some((c) => c.id === wanted) ? wanted : (classes[0]?.id ?? '');
 		loading = false;
 	}
+	async function loadAnnees(cid: string) {
+		if (!cid) { annees = []; selId = ''; return; }
+		const { data, error } = await sb().from('annees_scolaires').select('id,label,date_debut,term_system,nb_semaines').eq('class_id', cid).order('created_at', { ascending: false });
+		if (error) err = error.message;
+		annees = (data ?? []) as Annee[];
+		selId = annees[0]?.id ?? '';
+	}
+	$effect(() => { if (classId) loadAnnees(classId); });
 	async function loadPlan(id: string) {
 		if (!id) { periodes = []; sequences = []; seances = []; return; }
 		const { data: ps } = await sb().from('periodes').select('id,annee_id,label,ordre,term,semaine_debut,semaine_fin,couleur').eq('annee_id', id);
@@ -73,11 +91,11 @@
 		return Array.from({ length: n }, (_, i) => base + (i < rem ? 1 : 0));
 	}
 	async function createAnnee() {
-		if (!newLabel.trim()) return;
+		if (!newLabel.trim() || !classId) return;
 		creating = true; err = '';
 		const nb = 32, nP = 5, nbTerms = newSystem === 'semestre' ? 2 : 3;
 		const { data: a, error } = await sb().from('annees_scolaires').insert({
-			author_id: session.userId, etablissement_id: session.tenantId ?? null,
+			author_id: session.userId, etablissement_id: session.tenantId ?? null, class_id: classId,
 			label: newLabel.trim(), date_debut: newDebut || null, term_system: newSystem, nb_semaines: nb
 		}).select('id,label,date_debut,term_system,nb_semaines').single();
 		if (error || !a) { err = error?.message ?? 'création échouée'; creating = false; return; }
@@ -225,17 +243,76 @@
 		reset();
 	}
 
-	loadAnnees();
+	// Duplication PROFONDE de la progression courante vers une autre classe (option A : on
+	// clone année → périodes → séquences → séances). Mapping par (parent, ordre), robuste
+	// quel que soit l'ordre de retour des inserts.
+	async function duplicateProgression() {
+		if (!annee || !dupTo || dupTo === classId) return;
+		dupBusy = true; dupMsg = ''; err = '';
+		try {
+			const { data: na, error: e1 } = await sb().from('annees_scolaires').insert({
+				author_id: session.userId, etablissement_id: session.tenantId ?? null, class_id: dupTo,
+				label: annee.label, date_debut: annee.date_debut, term_system: annee.term_system, nb_semaines: annee.nb_semaines
+			}).select('id').single();
+			if (e1 || !na) throw e1 ?? new Error('année');
+
+			const srcPer = [...periodes].sort((a, b) => a.ordre - b.ordre);
+			const oldToNewPer = new Map<string, string>();
+			if (srcPer.length) {
+				const { data: np } = await sb().from('periodes').insert(
+					srcPer.map((p) => ({ annee_id: na.id, author_id: session.userId, label: p.label, ordre: p.ordre, term: p.term, semaine_debut: p.semaine_debut, semaine_fin: p.semaine_fin, couleur: p.couleur }))
+				).select('id,ordre');
+				const byOrdre = new Map<number, string>((np ?? []).map((x: { id: string; ordre: number }) => [x.ordre, x.id]));
+				srcPer.forEach((p) => { const id = byOrdre.get(p.ordre); if (id) oldToNewPer.set(p.id, id); });
+			}
+
+			const oldToNewSeq = new Map<string, string>();
+			if (sequences.length) {
+				const { data: ns } = await sb().from('sequences').insert(
+					sequences.map((s) => ({ periode_id: oldToNewPer.get(s.periode_id), author_id: session.userId, titre: s.titre, ordre: s.ordre }))
+				).select('id,periode_id,ordre');
+				const key = (pid: string, o: number) => `${pid}:${o}`;
+				const byKey = new Map<string, string>((ns ?? []).map((x: { id: string; periode_id: string; ordre: number }) => [key(x.periode_id, x.ordre), x.id]));
+				sequences.forEach((s) => { const np = oldToNewPer.get(s.periode_id); if (np) { const id = byKey.get(key(np, s.ordre)); if (id) oldToNewSeq.set(s.id, id); } });
+			}
+
+			// Séances : on récupère leurs steps (rituels) pour les cloner intégralement.
+			const srcIds = seances.filter((s) => s.sequence_id && oldToNewSeq.has(s.sequence_id)).map((s) => s.id);
+			if (srcIds.length) {
+				const { data: full } = await sb().from('parcours').select('id,titre,steps,sequence_id,ordre').in('id', srcIds);
+				const rows = (full ?? []).map((s: { titre: string; steps: unknown; sequence_id: string; ordre: number }) => ({
+					author_id: session.userId, etablissement_id: session.tenantId ?? null,
+					titre: s.titre, steps: s.steps, sequence_id: oldToNewSeq.get(s.sequence_id), ordre: s.ordre, is_published: false
+				}));
+				if (rows.length) await sb().from('parcours').insert(rows);
+			}
+
+			const target = classes.find((c) => c.id === dupTo);
+			dupMsg = `✅ Progression copiée vers « ${target?.nom ?? 'la classe'} ».`;
+			dupTo = '';
+		} catch (e) {
+			err = e instanceof Error ? e.message : String(e);
+		} finally {
+			dupBusy = false;
+		}
+	}
+
+	loadClasses();
 </script>
 
 <div class="head">
-	<h1>Progression annuelle</h1>
-	{#if annees.length}
-		<select bind:value={selId} aria-label="Année">
-			{#each annees as a (a.id)}<option value={a.id}>{a.label} · {a.term_system}</option>{/each}
+	<h1>Progression</h1>
+	{#if classes.length}
+		<select class="cls" bind:value={classId} aria-label="Classe">
+			{#each classes as c (c.id)}<option value={c.id}>🏫 {c.nom}</option>{/each}
 		</select>
 	{/if}
-	<button class="new" onclick={() => (creating = !creating)}>＋ Nouvelle année</button>
+	{#if annees.length > 1}
+		<select bind:value={selId} aria-label="Année">
+			{#each annees as a (a.id)}<option value={a.id}>{a.label}</option>{/each}
+		</select>
+	{/if}
+	{#if classId}<button class="new" onclick={() => (creating = !creating)}>＋ Nouvelle année</button>{/if}
 </div>
 
 {#if creating}
@@ -249,12 +326,26 @@
 	</form>
 {/if}
 
+{#if annee && classes.length > 1}
+	<div class="dupbar">
+		<span class="dl">Dupliquer cette progression vers&nbsp;:</span>
+		<select bind:value={dupTo} aria-label="Classe cible">
+			<option value="">— une autre classe —</option>
+			{#each classes.filter((c) => c.id !== classId) as c (c.id)}<option value={c.id}>{c.nom}</option>{/each}
+		</select>
+		<button class="dup" disabled={!dupTo || dupBusy} onclick={duplicateProgression}>{dupBusy ? 'Copie…' : '⧉ Dupliquer'}</button>
+		{#if dupMsg}<span class="dupmsg">{dupMsg}</span>{/if}
+	</div>
+{/if}
+
 {#if err}<p class="err">⚠ {err}</p>{/if}
 
 {#if loading}
 	<p class="muted">Chargement…</p>
+{:else if !classes.length}
+	<p class="muted">Tu n'as pas encore de classe. Crée-en une dans <a href={`${base}/prof`}>Mes classes</a>, puis reviens organiser sa progression.</p>
 {:else if !annee}
-	<p class="muted">Aucune année. Crée ta première progression — elle arrivera pré-remplie, à ajuster.</p>
+	<p class="muted">La classe <strong>{cls?.nom}</strong> n'a pas encore de progression. Clique <strong>＋ Nouvelle année</strong> — elle arrivera pré-remplie, à ajuster.</p>
 {:else}
 	<div class="viewtabs">
 		<button class:on={viewMode === 'arbre'} onclick={() => (viewMode = 'arbre')}>🌳 Arborescence</button>
@@ -401,7 +492,14 @@
 <style>
 	.head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 	.head select { padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius); }
+	.head .cls { font-weight: 700; }
 	.new { margin-left: auto; border: 1px solid var(--role-accent); background: var(--role-accent-soft); color: var(--role-accent); border-radius: var(--radius); padding: 0.45rem 0.9rem; font-weight: 700; cursor: pointer; }
+	.dupbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin: var(--space-3) 0; padding: 0.5rem 0.7rem; background: var(--gray-50); border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.85rem; }
+	.dupbar .dl { color: var(--text-muted); font-weight: 600; }
+	.dupbar select { padding: 0.3rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); }
+	.dup { border: 1px solid var(--role-accent); background: var(--role-accent); color: #fff; border-radius: var(--radius); padding: 0.35rem 0.8rem; font-weight: 700; cursor: pointer; }
+	.dup:disabled { opacity: 0.5; cursor: not-allowed; }
+	.dupmsg { color: var(--success); font-weight: 600; }
 	.create { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: end; margin: var(--space-3) 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
 	.create input, .create select { padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius); }
 	.create label { display: grid; gap: 0.2rem; font-size: 0.78rem; color: var(--text-muted); }
