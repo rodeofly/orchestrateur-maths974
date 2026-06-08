@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '$styles/app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { ensureSessionLoaded, session, stopSimulating } from '$auth/session.svelte';
@@ -10,6 +11,22 @@
 
 	// Démarre tôt le chargement de session (idempotent). Les gardes l'awaitent.
 	ensureSessionLoaded();
+
+	// Chunk périmé après un redéploiement : quand un import dynamique échoue (le fichier a
+	// changé de hash), Vite émet 'vite:preloadError'. On recharge proprement pour récupérer
+	// la nouvelle version — au plus 1 fois / 10 s (garde anti-boucle si vraie panne).
+	onMount(() => {
+		const onPreloadError = (e: Event) => {
+			e.preventDefault();
+			const last = Number(sessionStorage.getItem('staleReloadAt') || 0);
+			if (Date.now() - last > 10_000) {
+				sessionStorage.setItem('staleReloadAt', String(Date.now()));
+				location.reload();
+			}
+		};
+		window.addEventListener('vite:preloadError', onPreloadError);
+		return () => window.removeEventListener('vite:preloadError', onPreloadError);
+	});
 
 	async function restore() {
 		const home = homeFor(session.role);

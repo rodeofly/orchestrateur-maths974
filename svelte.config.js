@@ -20,6 +20,9 @@ const config = {
 			$styles: 'src/lib/styles',
 			$auth: 'src/lib/auth'
 		},
+		// Détecte un nouveau déploiement (poll de _app/version.json) → SvelteKit bascule en
+		// navigation complète plutôt que de tenter un chunk périmé. Cf. handler vite:preloadError.
+		version: { pollInterval: 60000 },
 		// CSP stricte (RGPD/mineurs : le refresh token vit en localStorage → durcir le XSS).
 		// SvelteKit hashe ses propres scripts inline et injecte la CSP dans le HTML statique.
 		csp: {
