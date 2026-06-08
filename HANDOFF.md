@@ -200,9 +200,14 @@ npm run sync:m974        # resync des paquets vendorés (embed + competences)
 **Clés Supabase (nouveau format)** : *Publishable* `sb_publishable_…` = anon (→ `PUBLIC_SUPABASE_ANON_KEY`,
 sûre côté navigateur car RLS) ; *Secret* `sb_secret_…` = service_role (Edge only, **jamais** exposée).
 
-**Déploiement** (à activer) : pousser sur `ftobe-maths974/orchestrateur-maths974`, déclarer les
-secrets `PUBLIC_SUPABASE_*` dans Actions → `.github/workflows/{ci,deploy}.yml` font CI + Pages.
-`BASE_PATH=/orchestrateur-maths974` en prod.
+**Déploiement — LIVE (2026-06-08)** :
+- Orchestrateur : **https://rodeofly.github.io/orchestrateur-maths974/** (repo `rodeofly/orchestrateur-maths974`, public ;
+  secrets `PUBLIC_SUPABASE_*` posés ; `.github/workflows/{ci,deploy}.yml` → CI + Pages ; `BASE_PATH=/orchestrateur-maths974` ;
+  `deploy.yml` copie `index.html`→`404.html` pour les deep links SPA).
+- Activités prod : **λ-Zèf v2** = https://rodeofly.github.io/VicBret974/ (repo `rodeofly/VicBret974`) ;
+  **GS** = https://automaths.maths974.fr/ (pont mergé sur `main` de `rodeofly/GS.C4.2026.Maths974` → publie vers `ftobe-maths974/maths`).
+- `gh` est authentifié `rodeofly` (non membre de `ftobe-maths974`) → tout sous `rodeofly`, transférable à l'orga plus tard.
+- À faire côté Flo : ajouter le redirect URL Supabase `https://rodeofly.github.io/orchestrateur-maths974/auth/callback` (magic link).
 
 ---
 
@@ -235,6 +240,13 @@ secrets `PUBLIC_SUPABASE_*` dans Actions → `.github/workflows/{ci,deploy}.yml`
 - [x] **État de la classe (prof)** : la page classe `/prof/classe/[id]` montre les tentatives récentes
       des élèves (RLS `attempts_teacher`, testé) → le prof vérifie « qui a fait quoi ». La page
       `/prof/seance` est renommée **« Aperçu activité »** (outil de test qui N'enregistre PAS — clarifié).
+- [x] **Panneau admin « Utilisateurs & rôles »** (`/admin/utilisateurs`) : lister les ADULTES du tenant,
+      changer un rôle, **inviter** un prof/parent par e-mail. Écritures privilégiées via Edge Functions
+      `invite-user`/`set-user-role` + fonction SQL atomique `admin_set_role` (migration **0006**), conçues
+      d'après un **audit adversarial** (9 must-fix : tenant lu en base, anti-vol de compte, frontière
+      mineur↔adulte, dernier-admin, validation stricte, redirect en dur, audit log `admin_audit`). Testé
+      en PGlite. **Pas d'impersonation** (distinct de « Voir comme… »). Reste should-fix : rate-limit invite,
+      CORS restreint, session-invalidation (mitigée car la session lit le rôle depuis la TABLE, pas le claim).
 - [x] **Pont GS → orchestrateur** : GS (automaths/zefor) émet son `AttemptResult` par
       `postMessage` quand il est embarqué (`../GS.C4.2026.Maths974/src/utils/embed/` +
       auto-mapping thème→macro pour combler le trou d'annotation `|comp:`). Embarquer une

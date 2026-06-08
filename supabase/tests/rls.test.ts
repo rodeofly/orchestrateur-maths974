@@ -22,6 +22,7 @@ $$;
 create role anon nologin;
 create role authenticated nologin;
 create role supabase_auth_admin nologin;
+create role service_role nologin;
 grant usage on schema public, auth to anon, authenticated;
 `;
 
@@ -67,6 +68,7 @@ beforeAll(async () => {
 	await db.exec(mig('0003_auth_hook.sql'));
 	await db.exec(mig('0004_prof_classes.sql'));
 	await db.exec(mig('0005_parcours.sql'));
+	await db.exec(mig('0006_admin_management.sql'));
 	await db.exec(`grant select, insert, update, delete on all tables in schema public to authenticated;`);
 
 	// Seed en superuser (RLS contournée).
@@ -75,11 +77,11 @@ beforeAll(async () => {
 		insert into auth.users (id,email) values
 			('${PA1}','pa1@t.fr'),('${PA2}','pa2@t.fr'),('${ADM}','adm@t.fr'),
 			('${SA1}',null),('${SA2}',null),('${SB1}',null),('${PAR}','par@t.fr');
-		update profiles set role='prof',  etablissement_id='${ETAB_A}' where id in ('${PA1}','${PA2}');
-		update profiles set role='admin', etablissement_id='${ETAB_A}' where id='${ADM}';
+		update profiles set role='prof',  etablissement_id='${ETAB_A}', is_minor=false where id in ('${PA1}','${PA2}');
+		update profiles set role='admin', etablissement_id='${ETAB_A}', is_minor=false where id='${ADM}';
 		update profiles set role='eleve', etablissement_id='${ETAB_A}' where id in ('${SA1}','${SA2}');
 		update profiles set role='eleve', etablissement_id='${ETAB_B}' where id='${SB1}';
-		update profiles set role='parent' where id='${PAR}';
+		update profiles set role='parent', is_minor=false where id='${PAR}';
 		insert into classes (id,etablissement_id,nom) values
 			('${CA1}','${ETAB_A}','CA1'),('${CA2}','${ETAB_A}','CA2'),('${CB1}','${ETAB_B}','CB1');
 		insert into class_teachers (class_id,teacher_id) values ('${CA1}','${PA1}'),('${CA2}','${PA2}');
@@ -208,5 +210,27 @@ describe('RLS — un élève n’enregistre QUE ses propres tentatives', () => {
 				);
 			})
 		).rejects.toThrow();
+	});
+});
+
+// Placé en dernier : ces appels MUTENT les rôles (et restaurent l'état initial à la fin).
+describe('admin_set_role — gestion des rôles atomique & sûre', () => {
+	const call = async (c: string, t: string, r: string) =>
+		(await db.query<{ r: string }>(`select public.admin_set_role('${c}','${t}','${r}') as r`)).rows[0].r;
+
+	it('refuse : non-admin, autre établissement, mineur, auto-modif, rôle invalide', async () => {
+		expect(await call(PA1, PA2, 'admin')).toBe('pas_admin'); // PA1 = prof
+		expect(await call(ADM, SB1, 'prof')).toBe('autre_tenant'); // SB1 = Collège B
+		expect(await call(ADM, SA1, 'prof')).toBe('mineur'); // SA1 = élève (mineur)
+		expect(await call(ADM, ADM, 'prof')).toBe('self');
+		expect(await call(ADM, PA1, 'eleve')).toBe('role_invalide'); // pas de bascule vers élève
+	});
+
+	it('un admin promeut/rétrograde un adulte de son tenant, en gardant ≥1 admin', async () => {
+		expect(await call(ADM, PA1, 'admin')).toBe('ok'); // 2 admins
+		expect(await call(PA1, ADM, 'prof')).toBe('ok'); // PA1(admin) rétrograde ADM → reste 1 admin
+		// restaure l'état initial (ADM admin, PA1 prof)
+		expect(await call(PA1, ADM, 'admin')).toBe('ok');
+		expect(await call(ADM, PA1, 'prof')).toBe('ok');
 	});
 });

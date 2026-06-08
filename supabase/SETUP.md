@@ -40,9 +40,18 @@ Code dans `supabase/functions/` (Deno). Déploiement :
 supabase login
 supabase functions deploy provision-students --project-ref <ref>
 supabase functions deploy erase-student      --project-ref <ref>
+supabase functions deploy invite-user        --project-ref <ref>   # admin : invite un adulte
+supabase functions deploy set-user-role      --project-ref <ref>   # admin : change un rôle
 # student-signin est appelée AVANT que l'élève soit authentifié → JWT non vérifié :
 supabase functions deploy student-signin     --project-ref <ref> --no-verify-jwt
 ```
+
+> `invite-user` / `set-user-role` gardent la **vérification JWT** (l'appelant doit être un admin
+> authentifié ; la fonction re-vérifie EN BASE qu'il est admin du bon établissement, via
+> `admin_set_role` SECURITY DEFINER pour le changement de rôle). Migration requise : **0006**.
+> Pour que les **invitations** partent réellement : configurer un **SMTP** dans Auth → SMTP
+> (le SMTP par défaut Supabase est très limité). Le `redirectTo` de l'invite est `…/auth/callback`
+> (doit figurer dans les Redirect URLs).
 
 > ⚠️ `student-signin` DOIT être déployée avec `--no-verify-jwt` (l'élève n'a pas encore de session ;
 > la fonction vérifie elle-même le PIN). Les deux autres gardent la vérification JWT (l'appelant est
