@@ -232,6 +232,7 @@
 	{/if}
 </section>
 
+{#if !editingSeanceId}
 <section class="mine">
 	<h2>Mes séances {#if mine.length}<span class="count">{mine.length}</span>{/if}</h2>
 		{#if loading}
@@ -278,6 +279,7 @@
 		{/if}
 		{#if msg}<p class="msg">{msg}</p>{/if}
 	</section>
+{/if}
 
 {#if pickerFor !== null && steps[pickerFor]}
 	<ActivityPicker
