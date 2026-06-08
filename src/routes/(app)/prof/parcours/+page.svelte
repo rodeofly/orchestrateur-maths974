@@ -5,7 +5,8 @@
 	import { onMount } from 'svelte';
 	import { getSupabase } from '$lib/supabase/client';
 	import { session } from '$auth/session.svelte';
-	import { ACTIVITIES, getActivity } from '$lib/activities/catalog';
+	import { getActivity } from '$lib/activities/catalog';
+	import ActivityPicker from '$components/library/ActivityPicker.svelte';
 	import { RITUELS, getRituel, normalizeSteps, type RituelType, type SeanceStep } from '$lib/activities/rituels';
 	import Button from '$components/ui/Button.svelte';
 	import Card from '$components/ui/Card.svelte';
@@ -25,6 +26,7 @@
 	let titre = $state('');
 	let steps = $state<SeanceStep[]>([]);
 	let creating = $state(false);
+	let pickerFor = $state<number | null>(null); // index du rituel dont on choisit une activité
 
 	let choice = $state<Record<string, string>>({});
 	let msg = $state('');
@@ -175,10 +177,7 @@
 									{:else}
 										<p class="muted small">Rituel vide — ajoute une activité.</p>
 									{/if}
-									<select onchange={(e) => { addActivity(i, (e.currentTarget as HTMLSelectElement).value); (e.currentTarget as HTMLSelectElement).value = ''; }} aria-label="Ajouter une activité">
-										<option value="">+ ajouter une activité…</option>
-										{#each ACTIVITIES as a (a.id)}<option value={a.id}>{a.emoji} {a.label}</option>{/each}
-									</select>
+									<button type="button" class="add-act" onclick={() => (pickerFor = i)}>＋ ajouter une activité</button>
 								</div>
 							</li>
 						{/each}
@@ -239,6 +238,14 @@
 	</section>
 </div>
 
+{#if pickerFor !== null && steps[pickerFor]}
+	<ActivityPicker
+		rituel={steps[pickerFor].rituel}
+		onpick={(id) => addActivity(pickerFor!, id)}
+		onclose={() => (pickerFor = null)}
+	/>
+{/if}
+
 <style>
 	.sub { color: var(--text-muted); margin: var(--space-2) 0 var(--space-4); }
 	.cols { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
@@ -275,6 +282,7 @@
 	.btn:disabled { opacity: 0.5; cursor: default; }
 	.pub { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 0.85rem; color: var(--text-muted); }
 	.msg { margin-top: var(--space-2); font-weight: 600; }
+	.add-act { align-self: start; border: 1px dashed var(--role-accent); background: var(--role-accent-soft); color: var(--role-accent); border-radius: var(--radius); padding: 0.4rem 0.8rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
 	.muted { color: var(--text-muted); }
 	.err { color: var(--danger); }
 	@media (min-width: 980px) { .cols { grid-template-columns: 1fr 1fr; } }
