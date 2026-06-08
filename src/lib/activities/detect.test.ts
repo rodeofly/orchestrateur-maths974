@@ -2,23 +2,24 @@ import { describe, it, expect } from 'vitest';
 import { detectActivity, isExternalLinkId } from './detect';
 
 describe('detect — auto-détection de lien externe', () => {
-	it('reconnaît les fournisseurs connus (label + emoji + externe)', () => {
-		const m = detectActivity('https://coopmaths.fr/alea/?uuid=bdb18&v=eleve')!;
-		expect(m.label).toBe('MathALEA');
-		expect(m.emoji).toBe('🎲');
+	it('un lien MathALEA (même coopmaths.fr) → réécrit vers NOTRE instance, embarqué + capté', () => {
+		const m = detectActivity('https://coopmaths.fr/alea/?uuid=bdb18&id=4A10&v=eleve')!;
+		expect(m.label).toBe('MathsAlea974 · 4A10'); // le code d'exo enrichit le libellé
 		expect(m.source).toBe('coopmaths');
-		expect(m.embed.mode).toBe('newtab');
-		expect(m.embed.connector).toBe('none');
+		expect(m.embed.connector).toBe('bridged'); // capté par notre pont
+		expect(m.embed.mode).toBeUndefined(); // iframe (pas newtab)
+		expect(m.embed.originProd).toBe('https://rodeofly.github.io'); // servi par NOTRE instance
+		expect(m.embed.path).toContain('recorder=moodle'); // recorder ajouté
+		expect(m.id).toBe('https://coopmaths.fr/alea/?uuid=bdb18&id=4A10&v=eleve'); // l'URL collée reste l'id
+		// un lien déjà sur notre instance marche aussi
+		expect(detectActivity('https://rodeofly.github.io/alea/?uuid=x&v=eleve')!.embed.connector).toBe('bridged');
+	});
 
+	it('reconnaît les autres fournisseurs (externes, newtab)', () => {
 		expect(detectActivity('https://www.khanacademy.org/math/cc-third-grade')!.label).toBe('Khan Academy');
 		expect(detectActivity('https://learningapps.org/watch?app=abc123')!.label).toBe('LearningApps');
 		expect(detectActivity('https://youtu.be/abc')!.support).toBe('video');
-	});
-
-	it("l'URL est l'id et reconstruit l'URL complète", () => {
-		const m = detectActivity('https://coopmaths.fr/alea/?uuid=bdb18&v=eleve')!;
-		expect(m.id).toBe('https://coopmaths.fr/alea/?uuid=bdb18&v=eleve');
-		expect(m.embed.originProd! + m.embed.path).toBe('https://coopmaths.fr/alea/?uuid=bdb18&v=eleve');
+		expect(detectActivity('https://www.khanacademy.org/x')!.embed.mode).toBe('newtab');
 	});
 
 	it('hôte inconnu → lien générique 🔗', () => {

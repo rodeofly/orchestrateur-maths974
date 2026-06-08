@@ -84,11 +84,15 @@
 		{#if results.length > 60}<p class="muted">… {results.length - 60} de plus — affine la recherche.</p>{/if}
 	</div>
 
+	<div class="mathalea-cfg">
+		<button class="cfg" onclick={() => window.open('https://rodeofly.github.io/alea/', '_blank', 'noopener')}>🎲 Configurer un exercice MathsAlea974 ↗</button>
+		<span class="cfg-steps">configure → « lien élève » → copie → colle ci-dessous</span>
+	</div>
 	<div class="paste">
 		<input
 			bind:value={link}
-			placeholder="🔗 …ou colle un lien (Khan, mathaléa, LearningApps…)"
-			aria-label="Coller un lien externe"
+			placeholder="🔗 …colle ici le lien (exercice MathALEA, Khan, LearningApps…)"
+			aria-label="Coller un lien"
 			onkeydown={(e) => e.key === 'Enter' && addLink()}
 		/>
 		<button class="addlink" disabled={!detected} onclick={addLink}>Ajouter</button>
@@ -96,7 +100,11 @@
 	{#if link.trim() && !detected}
 		<p class="paste-hint err">Lien non reconnu — il doit commencer par https://</p>
 	{:else if detected}
-		<p class="paste-hint">{detected.emoji} <strong>{detected.label}</strong> — s'ouvrira dans un nouvel onglet (validation par emojis).</p>
+		<p class="paste-hint">
+			{detected.emoji} <strong>{detected.label}</strong> —
+			{#if detected.embed.connector === 'bridged'}embarqué, <strong>réussites captées</strong> 🎯
+			{:else}s'ouvrira dans un nouvel onglet (validation par emojis){/if}
+		</p>
 	{/if}
 </div>
 
@@ -124,7 +132,10 @@
 	.sub .dom { font-size: 0.74rem; color: var(--text-muted); }
 	.add { font-size: 1.3rem; color: var(--role-accent); font-weight: 700; }
 	.muted { color: var(--text-muted); padding: var(--space-3); }
-	.paste { display: flex; gap: var(--space-2); padding: var(--space-2) var(--space-4) 0; border-top: 1px solid var(--border); margin-top: var(--space-2); padding-top: var(--space-3); }
+	.mathalea-cfg { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-3) var(--space-4) 0; border-top: 1px solid var(--border); margin-top: var(--space-2); }
+	.cfg { border: 1px solid var(--role-accent); background: var(--role-accent-soft); color: var(--role-accent); border-radius: var(--radius); padding: 0.4rem 0.8rem; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
+	.cfg-steps { font-size: 0.72rem; color: var(--text-muted); }
+	.paste { display: flex; gap: var(--space-2); padding: var(--space-2) var(--space-4) 0; }
 	.paste input { flex: 1 1 auto; padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius); }
 	.addlink { border: 1px solid var(--role-accent); background: var(--role-accent); color: #fff; border-radius: var(--radius); padding: 0.4rem 0.9rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
 	.addlink:disabled { opacity: 0.45; cursor: not-allowed; }

@@ -36,8 +36,15 @@ export function isExternalLinkId(id: string): boolean {
 	return /^https?:\/\//i.test(id.trim());
 }
 
-/** Détecte le fournisseur d'une URL collée et renvoie une ActivityMeta « externe »
- *  (mode newtab), ou null si l'entrée n'est pas une URL http(s) valide. */
+// Notre instance MathALEA auto-hébergée (build statique, sans Cloudflare → embarquable).
+const MATHALEA_ORIGIN = 'https://rodeofly.github.io';
+const isMathaleaLink = (host: string, path: string) =>
+	(/(^|\.)coopmaths\.fr$/.test(host) || /(^|\.)rodeofly\.github\.io$/.test(host)) && path.startsWith('/alea');
+
+/** Détecte le fournisseur d'une URL collée et renvoie une ActivityMeta.
+ *  Cas spécial MathALEA : tout lien (même coopmaths.fr) est RÉÉCRIT vers notre instance
+ *  → embarqué (iframe) + capté (recorder=moodle, pont 'coopmaths'). Sinon : lien externe
+ *  (newtab). null si l'entrée n'est pas une URL http(s) valide. */
 export function detectActivity(input: string): ActivityMeta | null {
 	let url: URL;
 	try {
@@ -48,6 +55,28 @@ export function detectActivity(input: string): ActivityMeta | null {
 	if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
 
 	const host = url.hostname.toLowerCase();
+
+	// ── MathALEA : exercice configuré par le prof → servi via NOTRE instance, capté ──
+	if (isMathaleaLink(host, url.pathname)) {
+		let qs = url.search;
+		if (!/[?&]recorder=/.test(qs)) qs += (qs ? '&' : '?') + 'recorder=moodle&iframe=1';
+		const idParam = url.searchParams.get('id');
+		return {
+			id: url.href, // on garde l'URL collée comme id ; getActivity la réécrit pareil
+			source: 'coopmaths',
+			label: idParam ? `MathsAlea974 · ${idParam}` : 'MathsAlea974 — exercice',
+			emoji: '🎲',
+			description: 'Exercice MathALEA configuré, embarqué — réussites captées. Propulsé par CoopMaths.',
+			kind: 'graded',
+			support: 'quiz',
+			embed: { originProd: MATHALEA_ORIGIN, path: url.pathname + qs + url.hash, connector: 'bridged' },
+			taxo: { domaineKey: '00-transversal', domaineLabel: 'Transversal' },
+			competences: [],
+			rituels: [],
+			keywords: ['mathalea', 'coopmaths', 'exercice']
+		};
+	}
+
 	const p = PROVIDERS.find((x) => x.test.test(host));
 	const prettyHost = host.replace(/^www\./, '');
 
