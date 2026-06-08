@@ -5,7 +5,7 @@
 </script>
 
 <header class="pub">
-	<a class="brand" href={`${base}/`}>Maths974</a>
+	<a class="brand" href={`${base}/`} aria-label="Maths974 — accueil"><img src={`${base}/logo.svg`} alt="Maths974" /></a>
 	<nav>
 		<a href={`${base}/a-propos`}>À propos</a>
 		<a class="cta" href={`${base}/connexion`}>Connexion</a>
@@ -16,6 +16,7 @@
 
 <footer class="pub-foot">
 	<span>© Maths974 — association</span>
+	<span class="credit">Exercices propulsés par <a href="https://forge.apps.education.fr/coopmaths/mathalea" target="_blank" rel="noopener">MathALEA — CoopMaths</a> (AGPL)</span>
 	<a href={`${base}/confidentialite`}>Confidentialité & RGPD</a>
 </footer>
 
@@ -29,9 +30,21 @@
 		background: var(--surface);
 	}
 	.brand {
-		font-weight: 800;
-		font-size: 1.2rem;
-		color: var(--brand);
+		display: inline-flex;
+		align-items: center;
+	}
+	.brand img {
+		height: 2.1rem;
+		width: auto;
+		display: block;
+	}
+	.credit {
+		font-size: 0.78rem;
+		opacity: 0.8;
+	}
+	.credit a {
+		color: inherit;
+		text-decoration: underline;
 	}
 	.pub nav {
 		display: flex;

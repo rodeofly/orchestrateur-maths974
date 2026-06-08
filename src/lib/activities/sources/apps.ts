@@ -18,9 +18,9 @@ export const APP_ACTIVITIES: ActivityMeta[] = [
 	{
 		id: 'mathalea',
 		source: 'coopmaths',
-		label: 'MathALEA — exercices coopmaths',
+		label: 'MathsAlea974',
 		emoji: '🎲',
-		description: 'Banque d’exercices aléatoires auto-corrigés (CoopMaths), embarquée — les réussites sont captées.',
+		description: 'Banque d’exercices aléatoires auto-corrigés, embarquée — réussites captées. Propulsé par MathALEA · CoopMaths.',
 		kind: 'graded',
 		support: 'quiz',
 		embed: { originProd: 'https://rodeofly.github.io', path: MATHALEA_EXO, connector: 'bridged' },

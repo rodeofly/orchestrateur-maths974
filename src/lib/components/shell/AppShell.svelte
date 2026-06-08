@@ -38,7 +38,9 @@
 	<a href="#contenu" class="skip-link">Aller au contenu</a>
 
 	<header class="topbar">
-		<a class="brand" href={resolveHref(base, '/')}>Maths974</a>
+		<a class="brand" href={resolveHref(base, '/')} aria-label="Maths974 — accueil">
+			<img src={resolveHref(base, '/logo.svg')} alt="Maths974" />
+		</a>
 		<RoleBadge {role} />
 		<span class="spacer"></span>
 		{#if sims.length}
@@ -84,9 +86,13 @@
 		z-index: var(--z-nav);
 	}
 	.brand {
-		font-weight: 800;
-		color: var(--role-accent);
-		font-size: 1.1rem;
+		display: inline-flex;
+		align-items: center;
+	}
+	.brand img {
+		height: 2rem;
+		width: auto;
+		display: block;
 	}
 	.spacer {
 		flex: 1;
