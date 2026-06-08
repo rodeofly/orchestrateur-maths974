@@ -69,6 +69,7 @@ beforeAll(async () => {
 	await db.exec(mig('0004_prof_classes.sql'));
 	await db.exec(mig('0005_parcours.sql'));
 	await db.exec(mig('0006_admin_management.sql'));
+	await db.exec(mig('0007_planification.sql'));
 	await db.exec(`grant select, insert, update, delete on all tables in schema public to authenticated;`);
 
 	// Seed en superuser (RLS contournée).
@@ -119,6 +120,28 @@ describe('RLS — isolation prof', () => {
 	it('un prof NE voit PAS un élève d’un autre établissement', async () => {
 		await asUser(PA1, async () => {
 			expect(await seen('profiles', `id='${SB1}'`)).toBe(0);
+		});
+	});
+});
+
+describe('RLS — planification annuelle (année/période/séquence)', () => {
+	const ANNEE = 'eaaa0001-0000-0000-0000-000000000001';
+	it('un prof crée et voit SON année ; un autre prof ne la voit pas', async () => {
+		await asUser(PA1, async () => {
+			await db.query(
+				`insert into annees_scolaires (id, author_id, label, term_system) values ('${ANNEE}','${PA1}','2025–2026','semestre')`
+			);
+			expect(await seen('annees_scolaires', `id='${ANNEE}'`)).toBe(1);
+		});
+		await asUser(PA2, async () => {
+			expect(await seen('annees_scolaires', `id='${ANNEE}'`)).toBe(0);
+		});
+	});
+	it('un prof NE peut PAS créer une année au nom d’un autre (WITH CHECK)', async () => {
+		await asUser(PA2, async () => {
+			await expect(
+				db.query(`insert into annees_scolaires (author_id, label) values ('${PA1}','tentative de vol')`)
+			).rejects.toThrow();
 		});
 	});
 });
