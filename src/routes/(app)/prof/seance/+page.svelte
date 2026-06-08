@@ -12,11 +12,13 @@
 		if (a) {
 			url = activityUrl(a);
 			source = a.source;
+			mode = a.embed.mode ?? 'iframe';
 		}
 	}
 
 	let url = $state('http://localhost:5173/');
 	let source = $state<string | undefined>(undefined);
+	let mode = $state<'iframe' | 'newtab'>('iframe');
 	let activity = $state('lesson:a');
 	let running = $state(false);
 	let events = $state<{ kind: string; payload: unknown }[]>([]);
@@ -67,6 +69,7 @@
 					params={{ activity, kind: 'graded', timeLimit: 120 }}
 					allowOrigin="*"
 					title="activité embarquée"
+					{mode}
 					adapter={bridgeFor(source)}
 					onready={(p) => log('ready', p)}
 					onattempt={(p) => log('attempt', p)}

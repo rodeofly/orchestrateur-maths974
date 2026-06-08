@@ -103,6 +103,7 @@
 				allowOrigin="*"
 				title={current.label}
 				height="66vh"
+				mode={current.embed.mode}
 				adapter={bridgeFor(current.source)}
 				onattempt={onAttempt}
 			/>

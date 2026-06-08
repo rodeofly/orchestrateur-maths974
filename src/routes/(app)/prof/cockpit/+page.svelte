@@ -65,7 +65,7 @@
 	<div class="stage">
 		{#if backdrop}
 			{#key (isSeance ? 's' + idx : '') + backdrop.id}
-				<RunnerFrame url={activityUrl(backdrop)} params={{ kind: backdrop.kind }} allowOrigin="*" title={backdrop.label} height="100%" />
+				<RunnerFrame url={activityUrl(backdrop)} params={{ kind: backdrop.kind }} allowOrigin="*" title={backdrop.label} height="100%" mode={backdrop.embed.mode} />
 			{/key}
 		{:else}
 			<div class="board"></div>

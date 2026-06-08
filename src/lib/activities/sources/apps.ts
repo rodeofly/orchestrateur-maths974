@@ -6,11 +6,13 @@ import type { ActivityMeta } from '../types';
 const FTOBE = 'https://ftobe-maths974.github.io';
 const RODEOFLY = 'https://rodeofly.github.io';
 
-// MathALEA (coopmaths) — exemple d'app TIERCE captée par PONT (Tier 2). Lancée avec
-// ?recorder=moodle, elle poste { action:'mathalea:score', resultsByExercice } : on le
-// traduit via l'adaptateur ($lib/activities/bridges). Lien « élève » court (format Flo) ;
-// `recorder=moodle` active la remontée du score. La sélection d'exercices côté prof viendra.
-const MATHALEA_EXO = '/alea/?uuid=bdb18&id=4A10&alea=PHVi&v=eleve&es=22110011&recorder=moodle&iframe=1';
+// MathALEA (coopmaths). ⚠️ coopmaths.fr est derrière Cloudflare : EN IFRAME son challenge
+// anti-bot boucle (rechargement ~3 s) et échoue → NON embarquable. On l'ouvre donc dans un
+// NOUVEL ONGLET (navigation top-level, le challenge passe) → connector 'none', pas de capture
+// auto (Tier 3 : validation déclarative Tier 4 plus tard). Le PONT reste en place côté code
+// ($lib/activities/bridges, source 'coopmaths') : réutilisable si un mathaléa EMBARQUABLE
+// (auto-hébergé, sans Cloudflare) est branché un jour. Lien « élève » court (format Flo).
+const MATHALEA_EXO = '/alea/?uuid=bdb18&id=4A10&alea=PHVi&v=eleve&es=22110011';
 
 export const APP_ACTIVITIES: ActivityMeta[] = [
 	{
@@ -18,10 +20,10 @@ export const APP_ACTIVITIES: ActivityMeta[] = [
 		source: 'coopmaths',
 		label: 'MathALEA — exercices coopmaths',
 		emoji: '🎲',
-		description: 'Banque d’exercices aléatoires auto-corrigés (coopmaths). Réussites captées par pont.',
+		description: 'Banque d’exercices aléatoires auto-corrigés (coopmaths). S’ouvre dans un nouvel onglet.',
 		kind: 'graded',
 		support: 'quiz',
-		embed: { originProd: 'https://coopmaths.fr', path: MATHALEA_EXO, connector: 'bridged' },
+		embed: { originProd: 'https://coopmaths.fr', path: MATHALEA_EXO, mode: 'newtab', connector: 'none' },
 		taxo: { domaineKey: '00-transversal', domaineLabel: 'Transversal' },
 		competences: ['ca', 'ra'],
 		rituels: ['rapido', 'zefor', 'evaluation'],

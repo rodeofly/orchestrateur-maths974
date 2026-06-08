@@ -76,6 +76,7 @@
 			params={{ kind: selected.kind, studentKey: session.studentKey ?? undefined }}
 			allowOrigin="*"
 			title={selected.label}
+			mode={selected.embed.mode}
 			adapter={bridgeFor(selected.source)}
 			onattempt={onAttempt}
 		/>
