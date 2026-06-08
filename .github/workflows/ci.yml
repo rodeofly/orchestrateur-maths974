@@ -8,6 +8,11 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # Pas de .env en CI → on fournit des PUBLIC_* factices pour que svelte-kit sync
+    # génère bien les types $env/static/public (la vraie sécurité = RLS, pas ces clés).
+    env:
+      PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,9 +24,7 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm run check
       - run: npm test
-      # Build avec un base path pour valider la prod (clés factices : RLS = vraie sécurité).
+      # Build avec un base path pour valider la prod.
       - run: npm run build
         env:
           BASE_PATH: /orchestrateur-maths974
-          PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
-          PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
