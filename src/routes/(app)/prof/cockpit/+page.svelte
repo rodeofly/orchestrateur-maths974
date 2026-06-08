@@ -23,6 +23,8 @@
 
 	type Play = { rituel: RituelType; activityId: string };
 	let parcoursList = $state<{ id: string; titre: string; steps: unknown }[]>([]);
+	let showAll = $state(false); // menu Fond : court (séances récentes) ↔ tout le catalogue
+	const recentSeances = $derived(parcoursList.slice(0, 6)); // parcoursList est trié récent→ancien
 	let seance = $state<{ titre: string; plays: Play[] } | null>(null);
 	let idx = $state(0);
 
@@ -96,15 +98,26 @@
 		<div class="toolbar">
 			<select onchange={onSource} bind:value={source} title="Fond" aria-label="Fond">
 				<option value="blank">⬜ Tableau blanc</option>
-				<optgroup label="Activité">
-					{#each ACTIVITIES as a (a.id)}<option value={a.id}>{a.emoji} {a.label}</option>{/each}
-				</optgroup>
-				{#if parcoursList.length}
-					<optgroup label="Mes séances">
-						{#each parcoursList as p (p.id)}<option value={`seance:${p.id}`}>🎬 {p.titre}</option>{/each}
+				{#if !showAll}
+					{#if recentSeances.length}
+						<optgroup label="Séances récentes">
+							{#each recentSeances as p (p.id)}<option value={`seance:${p.id}`}>🎬 {p.titre}</option>{/each}
+						</optgroup>
+					{/if}
+				{:else}
+					{#if parcoursList.length}
+						<optgroup label="Mes séances">
+							{#each parcoursList as p (p.id)}<option value={`seance:${p.id}`}>🎬 {p.titre}</option>{/each}
+						</optgroup>
+					{/if}
+					<optgroup label="Activités du catalogue">
+						{#each ACTIVITIES as a (a.id)}<option value={a.id}>{a.emoji} {a.label}</option>{/each}
 					</optgroup>
 				{/if}
 			</select>
+			<label class="allcat" title="Charger toutes les séances + tout le catalogue d'activités">
+				<input type="checkbox" bind:checked={showAll} /> tout charger
+			</label>
 			<button class:on={annot} onclick={() => (annot = !annot)}>✏️ Annoter</button>
 			<button class:on={show.chrono} onclick={() => (show.chrono = !show.chrono)}>⏱ Chrono</button>
 			<button class:on={show.tirage} onclick={() => (show.tirage = !show.tirage)}>🎲 Tirage</button>
@@ -150,6 +163,7 @@
 	.toolbar select, .toolbar button { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.85rem; min-height: 0; }
 	.toolbar button.on { background: var(--role-accent); color: #fff; border-color: var(--role-accent); }
 	.toolbar .collapse { font-size: 1rem; line-height: 1; padding: 0.35rem 0.55rem; color: var(--text-muted); }
+	.toolbar .allcat { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; cursor: pointer; }
 	/* Pastille du dock replié : flottante, déplaçable, au-dessus de tout. */
 	.dock-mini { position: absolute; bottom: var(--space-3); left: var(--space-3); z-index: 30; display: flex; align-items: center; gap: 0.15rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 0.2rem 0.3rem; box-shadow: var(--shadow-lg); }
 	.dock-mini .grip { cursor: grab; touch-action: none; color: var(--text-muted); font-size: 1.1rem; padding: 0 0.2rem; user-select: none; }
