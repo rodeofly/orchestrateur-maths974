@@ -36,7 +36,9 @@ F1 Rituel (contextuel) · F2 Classe (souple, pas un masque dur) · F3 Domaine GS
 - **Étape 1** ✅ — `tree.ts` (buildTree) + `library.ts` (index inversé, filtre à compteurs, recherche) + tests.
 - **Étape 2** — Navigateur autonome `/prof/bibliotheque` (3 colonnes drill-down + recherche + facettes, état URL, réutilise `.am-theme-group`/`theme-colors`).
 - **Étape 3** — Sélection contextuelle dans le composer (remplace le `<select>` plat par un picker pré-filtré rituel+classe).
-- **Étape 4** — Générateur GS `src/pages/manifest.m974.json.ts` (avec les durcissements ci-dessus).
-- **Étape 5** — `sync-catalog.mjs` (agrège les manifestes vendorés) → `catalog.ts` devient agrégateur.
+- **Étape 4** ✅ — Générateur GS `GS.C4.2026.Maths974/src/pages/manifest.m974.json.ts` : 124 automaths dérivés
+  (domaine par dossier, `?ref=e.slug`, niveaux des variantes étiquetées). → `/manifest.m974.json`.
+- **Étape 5** ✅ — `scripts/sync-catalog.mjs` vendore `dist/manifest.m974.json` → `src/lib/activities/manifests/gs.json` ;
+  `catalog.ts` est un AGRÉGATEUR (λ-Zèf à la main + 124 GS). **125 activités** dans la bibliothèque.
 - **Étape 6** — Manifestes des apps non-GS (~5 lignes/app).
 - **Étape 7** — CI de cohérence (gs existe, theme mappe, ref résout, 00-transversal borné).

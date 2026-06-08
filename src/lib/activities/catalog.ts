@@ -1,15 +1,15 @@
-// Catalogue d'activités — agrégateur + helpers. Aujourd'hui 5 entrées tagguées à la main ;
-// demain peuplé par les manifestes auto-générés des sources (cf. docs/BIBLIOTHEQUE.md, Étapes 4-6).
+// Catalogue d'activités — AGRÉGATEUR. Les activités GS viennent du manifeste auto-généré
+// (npm run sync:catalog) ; les apps non-GS sont déclarées à la main (≈1 entrée/app).
+// Cf. docs/BIBLIOTHEQUE.md.
 import type { ActivityMeta } from './types';
+import gsManifest from './manifests/gs.json';
 
-// Alias rétro-compat : les écrans importent `type Activity`.
-export type Activity = ActivityMeta;
+export type Activity = ActivityMeta; // alias rétro-compat (les écrans importent `type Activity`)
 
-const GS = { originDev: 'http://localhost:4321', originProd: 'https://automaths.maths974.fr' };
+// ── Sources non-GS (déclaratif, ~1 entrée par app) ──
 const LAMBDAZEF = { originDev: 'http://localhost:5173', originProd: 'https://rodeofly.github.io/VicBret974' };
-const gsFiche = (slug: string) => `/automaths/eleve/?ref=${slug}`;
 
-export const ACTIVITIES: ActivityMeta[] = [
+const HAND: ActivityMeta[] = [
 	{
 		id: 'lambdazef',
 		source: 'lambdazef',
@@ -24,69 +24,17 @@ export const ACTIVITIES: ActivityMeta[] = [
 		competences: ['ra'],
 		rituels: ['zefor', 'divertissement'],
 		keywords: ['lambda', 'calcul', 'fonction', 'alligator', 'logique']
-	},
-	{
-		id: 'gs:zefor974/01-retour-unite',
-		source: 'gs',
-		label: 'Retour à l’unité (Zefor)',
-		emoji: '🍎',
-		description: 'Proportionnalité — méthode du retour à l’unité (GS 24.4).',
-		kind: 'graded',
-		support: 'fiche',
-		canonical: true,
-		embed: { ...GS, path: gsFiche('zefor974/01-retour-unite'), connector: 'm974' },
-		taxo: { gs: ['GS 24.4'], domaineKey: '05-proportionnalite', domaineLabel: 'Proportionnalité', sousTheme: '24. Proportionnalité' },
-		competences: ['ra', 'ch'],
-		niveaux: ['fragile', 'satisfaisant', 'tres-satisfaisant'],
-		rituels: ['zefor', 'probleme'],
-		keywords: ['proportionnalité', 'retour à l’unité', 'unité']
-	},
-	{
-		id: 'gs:zefor974/02-glisse-nombre',
-		source: 'gs',
-		label: 'Glisse-nombre (Zefor)',
-		emoji: '🔢',
-		description: 'Multiplier / diviser par 10, 100, 1000 (GS 3.11–3.12).',
-		kind: 'graded',
-		support: 'manipulable',
-		canonical: true,
-		embed: { ...GS, path: gsFiche('zefor974/02-glisse-nombre'), connector: 'm974' },
-		taxo: { gs: ['GS 3.11'], gsBonus: ['GS 3.12'], domaineKey: '01-nombres-et-calculs', domaineLabel: 'Nombres et calculs', sousTheme: '3. Nombres décimaux' },
-		competences: ['ca'],
-		rituels: ['rapido', 'zefor'],
-		keywords: ['décimaux', 'multiplier', 'diviser', '10 100 1000', 'virgule']
-	},
-	{
-		id: 'gs:zefor974/03-tableur',
-		source: 'gs',
-		label: 'Tableur (Zefor)',
-		emoji: '📊',
-		description: 'Vocabulaire, formules et DNB sur tableur (GS 19.3).',
-		kind: 'graded',
-		support: 'tableur',
-		canonical: true,
-		embed: { ...GS, path: gsFiche('zefor974/03-tableur'), connector: 'm974' },
-		taxo: { gs: ['GS 19.3'], domaineKey: '06-pensee-informatique', domaineLabel: 'Pensée informatique', sousTheme: 'Tableur' },
-		competences: ['re', 'ca'],
-		rituels: ['zefor', 'probleme'],
-		keywords: ['tableur', 'formule', 'cellule', 'dnb', 'somme', 'moyenne']
-	},
-	{
-		id: 'gs:zefor974/03-volume-cubes',
-		source: 'gs',
-		label: 'Volume de cubes (Zefor)',
-		emoji: '🧊',
-		description: 'Volume du pavé droit, formule produit (GS 12.4).',
-		kind: 'graded',
-		support: 'manipulable',
-		canonical: true,
-		embed: { ...GS, path: gsFiche('zefor974/03-volume-cubes'), connector: 'm974' },
-		taxo: { gs: ['GS 12.4'], domaineKey: '02-grandeurs-et-mesures', domaineLabel: 'Grandeurs et mesures', sousTheme: '12. Volumes' },
-		competences: ['re', 'ca'],
-		rituels: ['zefor', 'probleme'],
-		keywords: ['volume', 'pavé', 'cube', 'produit', 'cm³']
 	}
 ];
+
+// ── Activités GS (manifeste vendoré) : on injecte l'origine déclarée par le manifeste ──
+const gsOrigin = (gsManifest as { origin: { dev: string; prod: string } }).origin;
+const gsActs: ActivityMeta[] = (gsManifest as { activities: ActivityMeta[] }).activities.map((a) => ({
+	...a,
+	embed: { ...a.embed, originDev: gsOrigin.dev, originProd: gsOrigin.prod }
+}));
+
+export const ACTIVITIES: ActivityMeta[] = [...HAND, ...gsActs];
 
 export function activityUrl(a: ActivityMeta): string {
 	const origin = (import.meta.env.DEV ? a.embed.originDev : a.embed.originProd) ?? '';
