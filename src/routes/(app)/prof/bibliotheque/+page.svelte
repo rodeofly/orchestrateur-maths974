@@ -127,25 +127,25 @@
 {/if}
 
 <style>
-	.sub { color: var(--text-muted); margin: var(--space-2) 0 var(--space-4); }
-	.search { width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 1rem; margin-bottom: var(--space-3); }
-	.facets { display: grid; gap: var(--space-2); margin-bottom: var(--space-5); }
-	.frow { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-	.fl { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); width: 6rem; text-transform: uppercase; letter-spacing: 0.03em; }
-	.chip { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-full); padding: 0.25rem 0.7rem; font-size: 0.82rem; cursor: pointer; display: inline-flex; gap: 0.3rem; align-items: center; }
-	.chip i { font-style: normal; font-size: 0.72rem; opacity: 0.6; }
+	.sub { color: var(--text-muted); margin: var(--space-1) 0 var(--space-3); font-size: 0.85rem; }
+	.search { width: 100%; padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; margin-bottom: var(--space-2); }
+	.facets { display: grid; gap: 0.25rem; margin-bottom: var(--space-3); }
+	.frow { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
+	.fl { font-size: 0.62rem; font-weight: 700; color: var(--text-muted); width: 4.5rem; text-transform: uppercase; letter-spacing: 0.03em; flex: none; }
+	.chip { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-full); padding: 0.1rem 0.5rem; font-size: 0.72rem; cursor: pointer; display: inline-flex; gap: 0.2rem; align-items: center; line-height: 1.4; }
+	.chip i { font-style: normal; font-size: 0.62rem; opacity: 0.6; }
 	.chip.on { background: hsl(var(--h, 215) 70% 94%); border-color: hsl(var(--h, 215) 60% 55%); color: hsl(var(--h, 215) 55% 32%); font-weight: 600; }
 	.chip:disabled { opacity: 0.35; cursor: default; }
-	.reset { justify-self: start; border: none; background: none; color: var(--role-accent); cursor: pointer; font-weight: 600; padding: 0.2rem 0; }
+	.reset { justify-self: start; border: none; background: none; color: var(--role-accent); cursor: pointer; font-weight: 600; padding: 0.1rem 0; font-size: 0.78rem; }
 	.empty { color: var(--text-muted); padding: var(--space-6); text-align: center; }
-	.tree { display: grid; gap: var(--space-5); }
-	.dom { border-left: 4px solid hsl(var(--h) 60% 55%); padding-left: var(--space-4); }
-	.dom h2 { font-size: 1.15rem; color: hsl(var(--h) 55% 38%); }
-	.dom h2 .n { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
-	.st { margin-top: var(--space-3); }
-	.st h3 { font-size: 0.92rem; color: var(--text-muted); margin-bottom: var(--space-2); }
-	.leaf { margin: var(--space-2) 0 var(--space-3); }
-	.gs { display: inline-block; font-size: 0.72rem; font-weight: 700; background: var(--gray-900); color: #fff; padding: 0.1rem 0.5rem; border-radius: var(--radius-full); margin-bottom: var(--space-2); }
+	.tree { display: grid; gap: var(--space-3); }
+	.dom { border-left: 3px solid hsl(var(--h) 60% 55%); padding-left: var(--space-3); }
+	.dom h2 { font-size: 0.98rem; color: hsl(var(--h) 55% 38%); margin: 0; }
+	.dom h2 .n { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
+	.st { margin-top: var(--space-2); }
+	.st h3 { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+	.leaf { margin: 0.25rem 0 var(--space-2); }
+	.gs { display: inline-block; font-size: 0.64rem; font-weight: 700; background: var(--gray-900); color: #fff; padding: 0.05rem 0.4rem; border-radius: var(--radius-full); margin-bottom: 0.25rem; }
 	.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.4rem; }
 	.card { display: flex; gap: 0.4rem; align-items: center; padding: 0.3rem 0.45rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: left; width: 100%; min-width: 0; transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s; }
 	.card:hover { border-color: var(--role-accent); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
