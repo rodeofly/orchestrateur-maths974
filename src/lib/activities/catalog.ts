@@ -21,7 +21,7 @@ export interface Activity {
 
 const LAMBDAZEF = {
 	originDev: 'http://localhost:5173',
-	originProd: 'https://rodeofly.github.io/lambda-zef' // (grenier v2 — à déployer)
+	originProd: 'https://rodeofly.github.io/VicBret974' // λ-Zèf v2 (grenier) déployé, émet au connecteur
 };
 const GS = {
 	originDev: 'http://localhost:4321',
