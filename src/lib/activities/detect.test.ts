@@ -13,6 +13,8 @@ describe('detect — auto-détection de lien externe', () => {
 		expect(m.id).toBe('https://coopmaths.fr/alea/?uuid=bdb18&id=4A10&v=eleve'); // l'URL collée reste l'id
 		// un lien déjà sur notre instance marche aussi
 		expect(detectActivity('https://rodeofly.github.io/alea/?uuid=x&v=eleve')!.embed.connector).toBe('bridged');
+		// interactivité FORCÉE (es 2e caractère = '1') : sinon MathALEA ne poste pas de score
+		expect(detectActivity('https://coopmaths.fr/alea/?uuid=x&es=22110011&v=eleve')!.embed.path).toContain('es=21110011');
 	});
 
 	it('reconnaît les autres fournisseurs (externes, newtab)', () => {

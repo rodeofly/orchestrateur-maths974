@@ -41,6 +41,18 @@ const MATHALEA_ORIGIN = 'https://rodeofly.github.io';
 const isMathaleaLink = (host: string, path: string) =>
 	(/(^|\.)coopmaths\.fr$/.test(host) || /(^|\.)rodeofly\.github\.io$/.test(host)) && path.startsWith('/alea');
 
+// MathALEA encode ses réglages dans `es`, UN caractère par réglage :
+//   es = presMode|setInteractive|isSolutionAccessible|isInteractiveFree|oneShot|…
+// Le 2e caractère (setInteractive) DOIT valoir '1' pour que l'exercice soit interactif —
+// sinon pas de saisie, pas de bouton « score », donc AUCUN mathalea:score posté (= pas de
+// capture). On force donc es[1]='1'.
+function forceInteractive(qs: string): string {
+	if (/[?&]es=/.test(qs)) {
+		return qs.replace(/([?&]es=)([^&#]*)/, (_m, pre, es) => pre + (es.slice(0, 1) || '0') + '1' + es.slice(2));
+	}
+	return qs + (qs.includes('?') ? '&' : '?') + 'es=01100000';
+}
+
 /** Détecte le fournisseur d'une URL collée et renvoie une ActivityMeta.
  *  Cas spécial MathALEA : tout lien (même coopmaths.fr) est RÉÉCRIT vers notre instance
  *  → embarqué (iframe) + capté (recorder=moodle, pont 'coopmaths'). Sinon : lien externe
@@ -60,6 +72,7 @@ export function detectActivity(input: string): ActivityMeta | null {
 	if (isMathaleaLink(host, url.pathname)) {
 		let qs = url.search;
 		if (!/[?&]recorder=/.test(qs)) qs += (qs ? '&' : '?') + 'recorder=moodle&iframe=1';
+		qs = forceInteractive(qs); // sans interactivité, MathALEA ne poste pas de score
 		const idParam = url.searchParams.get('id');
 		return {
 			id: url.href, // on garde l'URL collée comme id ; getActivity la réécrit pareil

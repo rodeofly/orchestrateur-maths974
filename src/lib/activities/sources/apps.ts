@@ -11,8 +11,10 @@ const RODEOFLY = 'https://rodeofly.github.io';
 // Lancée avec `recorder=moodle`, elle poste `mathalea:score` → notre pont (connector
 // 'bridged', source 'coopmaths', $lib/activities/bridges) CAPTE les réussites (Tier 2).
 // coopmaths.fr direct restait bloqué par leur anti-bot Cloudflare. Lien « élève » court (Flo).
+// es=0111001 → 2e caractère (setInteractive) = '1' = exercice INTERACTIF (indispensable :
+// sans interactivité, MathALEA ne poste pas de score → pas de capture).
 const MATHALEA_EXO =
-	'/alea/?uuid=bdb18&id=4A10&alea=PHVi&v=eleve&es=22110011&recorder=moodle&iframe=1';
+	'/alea/?uuid=5f115&id=6G8A-1&n=3&d=10&s=1&s2=1&s3=true&s4=1&i=1&cd=1&alea=WSYf&v=eleve&es=0111001&recorder=moodle&iframe=1';
 
 export const APP_ACTIVITIES: ActivityMeta[] = [
 	{
