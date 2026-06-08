@@ -6,6 +6,7 @@
 	import { DOMAINES } from '$lib/activities/types';
 	import { filter, countBy, type FacetState } from '$lib/activities/library';
 	import { candidatesFor, score } from '$lib/activities/compat';
+	import { detectActivity } from '$lib/activities/detect';
 
 	let {
 		rituel,
@@ -19,6 +20,16 @@
 	let all = $state(false);
 	let q = $state('');
 	let selDom = $state<string[]>([]);
+
+	// Coller un lien externe (Khan, mathaléa, LearningApps…) → activité « newtab ».
+	let link = $state('');
+	const detected = $derived(link.trim() ? detectActivity(link) : null);
+	const addLink = () => {
+		if (detected) {
+			onpick(detected.id);
+			link = '';
+		}
+	};
 
 	const pool = $derived(all ? ACTIVITIES : reco);
 	const facets = $derived<FacetState>({
@@ -72,6 +83,21 @@
 		{/each}
 		{#if results.length > 60}<p class="muted">… {results.length - 60} de plus — affine la recherche.</p>{/if}
 	</div>
+
+	<div class="paste">
+		<input
+			bind:value={link}
+			placeholder="🔗 …ou colle un lien (Khan, mathaléa, LearningApps…)"
+			aria-label="Coller un lien externe"
+			onkeydown={(e) => e.key === 'Enter' && addLink()}
+		/>
+		<button class="addlink" disabled={!detected} onclick={addLink}>Ajouter</button>
+	</div>
+	{#if link.trim() && !detected}
+		<p class="paste-hint err">Lien non reconnu — il doit commencer par https://</p>
+	{:else if detected}
+		<p class="paste-hint">{detected.emoji} <strong>{detected.label}</strong> — s'ouvrira dans un nouvel onglet (validation par emojis).</p>
+	{/if}
 </div>
 
 <style>
@@ -98,4 +124,10 @@
 	.sub .dom { font-size: 0.74rem; color: var(--text-muted); }
 	.add { font-size: 1.3rem; color: var(--role-accent); font-weight: 700; }
 	.muted { color: var(--text-muted); padding: var(--space-3); }
+	.paste { display: flex; gap: var(--space-2); padding: var(--space-2) var(--space-4) 0; border-top: 1px solid var(--border); margin-top: var(--space-2); padding-top: var(--space-3); }
+	.paste input { flex: 1 1 auto; padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius); }
+	.addlink { border: 1px solid var(--role-accent); background: var(--role-accent); color: #fff; border-radius: var(--radius); padding: 0.4rem 0.9rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+	.addlink:disabled { opacity: 0.45; cursor: not-allowed; }
+	.paste-hint { padding: 0.3rem var(--space-4) var(--space-3); font-size: 0.8rem; color: var(--text-muted); }
+	.paste-hint.err { color: var(--danger); }
 </style>

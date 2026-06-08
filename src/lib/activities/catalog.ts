@@ -4,6 +4,7 @@
 import type { ActivityMeta } from './types';
 import gsManifest from './manifests/gs.json';
 import { APP_ACTIVITIES } from './sources/apps';
+import { detectActivity, isExternalLinkId } from './detect';
 
 export type Activity = ActivityMeta; // alias rétro-compat (les écrans importent `type Activity`)
 
@@ -45,5 +46,7 @@ export function activityUrl(a: ActivityMeta): string {
 }
 
 export function getActivity(id: string): ActivityMeta | undefined {
+	// Lien externe collé par le prof (l'URL est l'id) → on synthétise la meta à la volée.
+	if (isExternalLinkId(id)) return detectActivity(id) ?? undefined;
 	return ACTIVITIES.find((a) => a.id === id);
 }
