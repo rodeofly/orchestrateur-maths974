@@ -1,10 +1,11 @@
 <script lang="ts">
 	// Navigateur de bibliothèque : arbre Domaine → étiquette GS → activités, + recherche + facettes.
 	// On n'affiche jamais « tout » à plat : l'arbre se reconstruit depuis le sous-ensemble filtré.
-	import { ACTIVITIES } from '$lib/activities/catalog';
+	import { ACTIVITIES, type Activity } from '$lib/activities/catalog';
 	import { DOMAINES, type Comp, type ActivitySource, type Support } from '$lib/activities/types';
 	import { filter, countBy, type FacetState } from '$lib/activities/library';
 	import { buildTree } from '$lib/activities/tree';
+	import ActivityPreview from '$components/library/ActivityPreview.svelte';
 
 	const COMP_LABEL: Record<Comp, string> = { ch: 'chercher', mo: 'modéliser', re: 'représenter', ra: 'raisonner', ca: 'calculer', co: 'communiquer' };
 	const SUPPORT: Record<Support, { e: string; l: string }> = {
@@ -46,6 +47,8 @@
 
 	const active = $derived(selDom.length + selSup.length + selComp.length + selSrc.length + (q.trim() ? 1 : 0));
 	function reset() { q = ''; selDom = []; selSup = []; selComp = []; selSrc = []; }
+
+	let preview = $state<Activity | null>(null); // activité ouverte en aperçu
 </script>
 
 <h1>Bibliothèque</h1>
@@ -96,7 +99,7 @@
 								<span class="gs">{leaf.gs ?? 'sans étiquette'}</span>
 								<div class="cards">
 									{#each leaf.activities as a (a.id)}
-										<div class="card">
+										<button class="card" onclick={() => (preview = a)} title="Aperçu de {a.label}">
 											<span class="ico">{a.emoji ?? SUPPORT[a.support].e}</span>
 											<div class="meta">
 												<span class="t">{a.label}</span>
@@ -106,7 +109,8 @@
 													{#each a.competences ?? [] as c (c)}<span class="tag comp">{c}</span>{/each}
 												</span>
 											</div>
-										</div>
+											<span class="go" aria-hidden="true">›</span>
+										</button>
 									{/each}
 								</div>
 							</div>
@@ -116,6 +120,10 @@
 			</section>
 		{/each}
 	</div>
+{/if}
+
+{#if preview}
+	<ActivityPreview activity={preview} onclose={() => (preview = null)} />
 {/if}
 
 <style>
@@ -139,7 +147,10 @@
 	.leaf { margin: var(--space-2) 0 var(--space-3); }
 	.gs { display: inline-block; font-size: 0.72rem; font-weight: 700; background: var(--gray-900); color: #fff; padding: 0.1rem 0.5rem; border-radius: var(--radius-full); margin-bottom: var(--space-2); }
 	.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: var(--space-2); }
-	.card { display: flex; gap: var(--space-2); align-items: center; padding: 0.5rem 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+	.card { display: flex; gap: var(--space-2); align-items: center; padding: 0.5rem 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: left; width: 100%; transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s; }
+	.card:hover { border-color: var(--role-accent); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+	.card .go { margin-left: auto; color: var(--role-accent); font-size: 1.3rem; font-weight: 700; opacity: 0; transition: opacity 0.1s; }
+	.card:hover .go { opacity: 1; }
 	.ico { font-size: 1.5rem; }
 	.meta { display: grid; gap: 0.2rem; min-width: 0; }
 	.t { font-weight: 600; font-size: 0.92rem; }
