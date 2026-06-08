@@ -146,16 +146,16 @@
 	.st h3 { font-size: 0.92rem; color: var(--text-muted); margin-bottom: var(--space-2); }
 	.leaf { margin: var(--space-2) 0 var(--space-3); }
 	.gs { display: inline-block; font-size: 0.72rem; font-weight: 700; background: var(--gray-900); color: #fff; padding: 0.1rem 0.5rem; border-radius: var(--radius-full); margin-bottom: var(--space-2); }
-	.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: var(--space-2); }
-	.card { display: flex; gap: var(--space-2); align-items: center; padding: 0.5rem 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: left; width: 100%; transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s; }
+	.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.4rem; }
+	.card { display: flex; gap: 0.4rem; align-items: center; padding: 0.3rem 0.45rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: left; width: 100%; min-width: 0; transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s; }
 	.card:hover { border-color: var(--role-accent); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-	.card .go { margin-left: auto; color: var(--role-accent); font-size: 1.3rem; font-weight: 700; opacity: 0; transition: opacity 0.1s; }
+	.card .go { margin-left: auto; color: var(--role-accent); font-size: 1rem; font-weight: 700; opacity: 0; flex: none; transition: opacity 0.1s; }
 	.card:hover .go { opacity: 1; }
-	.ico { font-size: 1.5rem; }
-	.meta { display: grid; gap: 0.2rem; min-width: 0; }
-	.t { font-weight: 600; font-size: 0.92rem; }
-	.tags { display: flex; gap: 0.25rem; flex-wrap: wrap; }
-	.tag { font-size: 0.68rem; padding: 0.05rem 0.4rem; border-radius: var(--radius-full); background: var(--gray-100); color: var(--text-muted); }
+	.ico { font-size: 1.2rem; flex: none; }
+	.meta { display: grid; gap: 0.1rem; min-width: 0; }
+	.t { font-weight: 600; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.tags { display: flex; gap: 0.2rem; flex-wrap: nowrap; overflow: hidden; }
+	.tag { font-size: 0.6rem; padding: 0.03rem 0.32rem; border-radius: var(--radius-full); background: var(--gray-100); color: var(--text-muted); white-space: nowrap; flex: none; }
 	.tag.comp { background: var(--role-accent-soft); color: var(--role-accent); text-transform: uppercase; }
 	.tag.src { background: var(--gray-200); }
 </style>
