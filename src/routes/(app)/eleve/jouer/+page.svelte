@@ -32,17 +32,24 @@
 
 	async function onAttempt(p: unknown) {
 		const a = p as AttemptResult;
+		const passed = a.outcome?.passed ?? false;
+		// L'app ne remonte pas toujours de compétences (ex. MathALEA). Hors séance (pas de
+		// rituel pour les fournir), on rabat sur les compétences déclarées de l'activité.
+		const fromApp = Array.isArray(a.competencies) ? (a.competencies as unknown[]) : [];
+		const competencies = fromApp.length
+			? fromApp
+			: (selected?.competences ?? []).map((id) => ({ id, ok: passed }));
 		const { error } = await getSupabase()
 			.from('attempts')
 			.insert({
 				student_id: session.userId,
 				app: a.app,
 				activity_id: a.activityId,
-				passed: a.outcome?.passed ?? false,
+				passed,
 				score: a.outcome?.score ?? null,
 				outcome: a.outcome ?? {},
 				measures: a.measures ?? {},
-				competencies: a.competencies ?? [],
+				competencies,
 				kind: a.kind ?? 'graded'
 			});
 		if (error) lastErr = error.message;
