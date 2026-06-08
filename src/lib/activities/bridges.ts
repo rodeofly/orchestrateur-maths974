@@ -28,7 +28,10 @@ export type BridgeFn = (data: unknown, origin: string) => BridgedAttempt[] | nul
 //   compétences plus tard) avec score = points / questions.
 function mathaleaBridge(data: unknown): BridgedAttempt[] | null {
 	const d = data as { action?: string; resultsByExercice?: unknown };
-	if (!d || d.action !== 'mathalea:score' || !Array.isArray(d.resultsByExercice)) return null;
+	if (!d || d.action !== 'mathalea:score') return null;
+	// Diagnostic : on voit dans la console que le score MathALEA est bien arrivé jusqu'au pont.
+	console.info('[MathsAlea974] mathalea:score reçu →', d.resultsByExercice);
+	if (!Array.isArray(d.resultsByExercice)) return null;
 	const ts = new Date().toISOString();
 	const out: BridgedAttempt[] = [];
 	for (const raw of d.resultsByExercice) {
@@ -42,7 +45,9 @@ function mathaleaBridge(data: unknown): BridgedAttempt[] | null {
 			duration?: number;
 			state?: string;
 		};
-		if (!r || r.state !== 'done') continue; // exercices non terminés : ignorés
+		// On accepte tout exercice SCORÉ (un nb de questions défini) — sans exiger state:'done'
+		// (plus robuste selon les types d'exercices/flux MathALEA).
+		if (!r || typeof r.numberOfQuestions !== 'number') continue;
 		const total = Number(r.numberOfQuestions) || 0;
 		const got = Number(r.numberOfPoints) || 0;
 		const score = total > 0 ? Math.max(0, Math.min(1, got / total)) : got > 0 ? 1 : 0;
