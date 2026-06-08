@@ -3,6 +3,7 @@
 	// problèmes, éval, bilan, divertissement), remplit chacun d'activités du catalogue,
 	// puis assigne. Peut publier une séance comme MODÈLE Maths974, ou dupliquer un modèle.
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { getSupabase } from '$lib/supabase/client';
 	import { session } from '$auth/session.svelte';
 	import { getActivity } from '$lib/activities/catalog';
@@ -28,6 +29,27 @@
 	let steps = $state<SeanceStep[]>([]);
 	let creating = $state(false);
 	let pickerFor = $state<number | null>(null); // index du rituel dont on choisit une activité
+	let editingSeanceId = $state<string | null>(null); // édition d'une séance existante (?edit=)
+	let loadedEdit = '';
+
+	// Arrivée depuis l'arbre de progression (?edit=ID) → charge la séance dans le composeur.
+	$effect(() => {
+		const id = page.url.searchParams.get('edit');
+		if (id && id !== loadedEdit) { loadedEdit = id; loadForEdit(id); }
+	});
+	async function loadForEdit(id: string) {
+		const { data } = await getSupabase().from('parcours').select('id,titre,steps').eq('id', id).single();
+		if (data) {
+			titre = (data as { titre: string }).titre;
+			steps = normalizeSteps((data as { steps: unknown }).steps);
+			editingSeanceId = id;
+			composerOpen = true;
+		}
+	}
+	function toggleComposer() {
+		composerOpen = !composerOpen;
+		if (!composerOpen) { editingSeanceId = null; titre = ''; steps = []; loadedEdit = ''; }
+	}
 
 	let choice = $state<Record<string, string>>({});
 	let msg = $state('');
@@ -79,18 +101,23 @@
 		if (!titre.trim() || totalActivities === 0) return;
 		creating = true;
 		err = '';
-		const { error } = await getSupabase().from('parcours').insert({
-			titre: titre.trim(),
-			etablissement_id: session.tenantId,
-			author_id: session.userId,
-			steps,
-			is_published: false
-		});
+		const sb = getSupabase();
+		const { error } = editingSeanceId
+			? await sb.from('parcours').update({ titre: titre.trim(), steps }).eq('id', editingSeanceId)
+			: await sb.from('parcours').insert({
+					titre: titre.trim(),
+					etablissement_id: session.tenantId,
+					author_id: session.userId,
+					steps,
+					is_published: false
+				});
 		if (error) err = error.message;
 		else {
 			titre = '';
 			steps = [];
-			composerOpen = false; // on referme après création
+			editingSeanceId = null;
+			loadedEdit = '';
+			composerOpen = false; // on referme après enregistrement
 			await load();
 		}
 		creating = false;
@@ -145,8 +172,8 @@
 <p class="sub">Compose une séance en empilant des rituels, puis assigne-la (ou pars d'un modèle Maths974).</p>
 
 <section class="composer">
-	<button type="button" class="composer-toggle" class:open={composerOpen} onclick={() => (composerOpen = !composerOpen)} aria-expanded={composerOpen}>
-		<span class="ccaret">{composerOpen ? '▾' : '▸'}</span> ＋ Nouvelle séance
+	<button type="button" class="composer-toggle" class:open={composerOpen} onclick={toggleComposer} aria-expanded={composerOpen}>
+		<span class="ccaret">{composerOpen ? '▾' : '▸'}</span> {editingSeanceId ? '✏️ Modifier la séance' : '＋ Nouvelle séance'}
 	</button>
 	{#if composerOpen}
 		<Card>
@@ -196,7 +223,7 @@
 					</ol>
 				{/if}
 
-				<Button type="submit">{creating ? 'Enregistrement…' : 'Créer la séance'}</Button>
+				<Button type="submit">{creating ? 'Enregistrement…' : editingSeanceId ? 'Enregistrer les modifications' : 'Créer la séance'}</Button>
 			</form>
 			{#if err}<p class="err">{err}</p>{/if}
 		</Card>
