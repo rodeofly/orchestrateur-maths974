@@ -22,7 +22,8 @@
 	let loading = $state(true);
 	let err = $state('');
 
-	// Composeur
+	// Composeur — REPLIÉ par défaut (on arrive sur la liste).
+	let composerOpen = $state(false);
 	let titre = $state('');
 	let steps = $state<SeanceStep[]>([]);
 	let creating = $state(false);
@@ -89,9 +90,18 @@
 		else {
 			titre = '';
 			steps = [];
+			composerOpen = false; // on referme après création
 			await load();
 		}
 		creating = false;
+	}
+
+	async function del(p: Parcours) {
+		if (!confirm(`Supprimer la séance « ${p.titre} » ? (définitif)`)) return;
+		msg = '';
+		const { error } = await getSupabase().from('parcours').delete().eq('id', p.id);
+		if (error) msg = `⚠ ${error.message}`;
+		else parcours = parcours.filter((x) => x.id !== p.id);
 	}
 
 	async function assign(pId: string) {
@@ -134,10 +144,12 @@
 <h1>Séances & parcours</h1>
 <p class="sub">Compose une séance en empilant des rituels, puis assigne-la (ou pars d'un modèle Maths974).</p>
 
-<div class="cols">
-	<section>
+<section class="composer">
+	<button type="button" class="composer-toggle" class:open={composerOpen} onclick={() => (composerOpen = !composerOpen)} aria-expanded={composerOpen}>
+		<span class="ccaret">{composerOpen ? '▾' : '▸'}</span> ＋ Nouvelle séance
+	</button>
+	{#if composerOpen}
 		<Card>
-			<h2>Nouvelle séance</h2>
 			<form onsubmit={create}>
 				<input bind:value={titre} placeholder="Titre (ex. Proportionnalité — séance 1)" aria-label="Titre" />
 
@@ -188,33 +200,32 @@
 			</form>
 			{#if err}<p class="err">{err}</p>{/if}
 		</Card>
-	</section>
+	{/if}
+</section>
 
-	<section>
-		<h2>Mes séances</h2>
+<section class="mine">
+	<h2>Mes séances {#if mine.length}<span class="count">{mine.length}</span>{/if}</h2>
 		{#if loading}
 			<p class="muted">Chargement…</p>
 		{:else if mine.length === 0}
-			<EmptyState icon="🎬" title="Aucune séance" description="Compose ta première séance ci-contre." />
+			<EmptyState icon="🎬" title="Aucune séance" description="Crée ta première séance avec « ＋ Nouvelle séance »." />
 		{:else}
 			<ul class="list">
 				{#each mine as p (p.id)}
-					<li>
-						<div class="head">
+					<li class="srow">
+						<div class="srow-main">
 							<span class="titre">{p.titre}</span>
 							<span class="meta">{ritCount(p)} rituel{ritCount(p) > 1 ? 's' : ''}</span>
 						</div>
-						<div class="assign">
+						<div class="srow-actions">
 							<select bind:value={choice[p.id]} aria-label="Classe">
-								<option value="">— assigner à une classe —</option>
+								<option value="">— classe —</option>
 								{#each classes as c (c.id)}<option value={c.id}>{c.nom}</option>{/each}
 							</select>
-							<button class="btn" onclick={() => assign(p.id)} disabled={!choice[p.id]}>Assigner</button>
+							<button class="btn sm" onclick={() => assign(p.id)} disabled={!choice[p.id]}>Assigner</button>
+							<button class="icon" class:on={p.is_published} aria-label="Publier comme modèle" title={p.is_published ? 'Publié — cliquer pour dépublier' : 'Publier comme modèle Maths974'} onclick={() => togglePublish(p)}>{p.is_published ? '📤' : '📥'}</button>
+							<button class="icon danger" aria-label="Supprimer la séance" title="Supprimer la séance" onclick={() => del(p)}>🗑</button>
 						</div>
-						<label class="pub">
-							<input type="checkbox" checked={p.is_published} onchange={() => togglePublish(p)} />
-							Publier comme modèle Maths974
-						</label>
 					</li>
 				{/each}
 			</ul>
@@ -224,19 +235,20 @@
 			<h2 class="mt">Modèles Maths974</h2>
 			<ul class="list">
 				{#each templates as p (p.id)}
-					<li>
-						<div class="head">
+					<li class="srow">
+						<div class="srow-main">
 							<span class="titre">📚 {p.titre}</span>
 							<span class="meta">{ritCount(p)} rituel{ritCount(p) > 1 ? 's' : ''}</span>
 						</div>
-						<button class="btn ghost" onclick={() => duplicate(p)}>Dupliquer dans mes séances</button>
+						<div class="srow-actions">
+							<button class="btn sm ghost" onclick={() => duplicate(p)}>Dupliquer</button>
+						</div>
 					</li>
 				{/each}
 			</ul>
 		{/if}
 		{#if msg}<p class="msg">{msg}</p>{/if}
 	</section>
-</div>
 
 {#if pickerFor !== null && steps[pickerFor]}
 	<ActivityPicker
@@ -248,7 +260,11 @@
 
 <style>
 	.sub { color: var(--text-muted); margin: var(--space-2) 0 var(--space-4); }
-	.cols { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
+	.composer { margin-bottom: var(--space-4); }
+	.composer-toggle { width: 100%; text-align: left; border: 1px dashed var(--role-accent); background: var(--role-accent-soft); color: var(--role-accent); border-radius: var(--radius); padding: 0.55rem 0.9rem; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
+	.composer-toggle .ccaret { display: inline-block; width: 1rem; }
+	.composer-toggle.open { border-style: solid; margin-bottom: var(--space-3); }
+	.mine .count { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
 	h2 { font-size: 1.1rem; margin-bottom: var(--space-3); }
 	.mt { margin-top: var(--space-5); }
 	form { display: grid; gap: var(--space-3); }
@@ -270,20 +286,23 @@
 	.acts li { display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.25rem 0.5rem; font-size: 0.88rem; }
 	.acts li button { border: none; background: none; cursor: pointer; color: var(--text-muted); min-height: 0; }
 	.small { font-size: 0.82rem; }
-	.list { list-style: none; padding: 0; display: grid; gap: var(--space-3); }
-	.list li { padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
-	.head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-2); }
-	.titre { font-weight: 700; }
-	.meta { font-size: 0.82rem; color: var(--text-muted); }
-	.assign { display: flex; gap: var(--space-2); }
-	.assign select { flex: 1; }
+	.list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); }
+	.srow { display: flex; align-items: center; gap: var(--space-3); padding: 0.5rem 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+	.srow-main { display: flex; align-items: baseline; gap: var(--space-2); flex: 1; min-width: 0; }
+	.titre { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.meta { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; flex: none; }
+	.srow-actions { display: flex; align-items: center; gap: 0.35rem; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+	.srow-actions select { padding: 0.3rem 0.4rem; border: 1px solid var(--border); border-radius: var(--radius); max-width: 9rem; }
 	.btn { border: 1px solid var(--role-accent); background: var(--role-accent); color: #fff; border-radius: var(--radius); padding: 0.4rem 0.9rem; font-weight: 600; cursor: pointer; }
+	.btn.sm { padding: 0.32rem 0.6rem; font-size: 0.82rem; }
 	.btn.ghost { background: var(--surface); color: var(--text); border-color: var(--border); }
 	.btn:disabled { opacity: 0.5; cursor: default; }
-	.pub { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 0.85rem; color: var(--text-muted); }
+	.icon { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); width: 2rem; height: 2rem; min-height: 0; cursor: pointer; font-size: 0.95rem; display: grid; place-items: center; }
+	.icon:hover { border-color: var(--role-accent); }
+	.icon.on { background: var(--role-accent-soft); border-color: var(--role-accent); }
+	.icon.danger:hover { border-color: var(--danger); }
 	.msg { margin-top: var(--space-2); font-weight: 600; }
 	.add-act { align-self: start; border: 1px dashed var(--role-accent); background: var(--role-accent-soft); color: var(--role-accent); border-radius: var(--radius); padding: 0.4rem 0.8rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
 	.muted { color: var(--text-muted); }
 	.err { color: var(--danger); }
-	@media (min-width: 980px) { .cols { grid-template-columns: 1fr 1fr; } }
 </style>
