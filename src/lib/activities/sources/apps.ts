@@ -6,13 +6,13 @@ import type { ActivityMeta } from '../types';
 const FTOBE = 'https://ftobe-maths974.github.io';
 const RODEOFLY = 'https://rodeofly.github.io';
 
-// MathALEA (coopmaths). ⚠️ coopmaths.fr est derrière Cloudflare : EN IFRAME son challenge
-// anti-bot boucle (rechargement ~3 s) et échoue → NON embarquable. On l'ouvre donc dans un
-// NOUVEL ONGLET (navigation top-level, le challenge passe) → connector 'none', pas de capture
-// auto (Tier 3 : validation déclarative Tier 4 plus tard). Le PONT reste en place côté code
-// ($lib/activities/bridges, source 'coopmaths') : réutilisable si un mathaléa EMBARQUABLE
-// (auto-hébergé, sans Cloudflare) est branché un jour. Lien « élève » court (format Flo).
-const MATHALEA_EXO = '/alea/?uuid=bdb18&id=4A10&alea=PHVi&v=eleve&es=22110011';
+// MathALEA (CoopMaths). On embarque NOTRE instance auto-hébergée (rodeofly.github.io/alea,
+// build statique AGPL, cf. dépôt rodeofly/alea) : pas de Cloudflare → l'iframe marche.
+// Lancée avec `recorder=moodle`, elle poste `mathalea:score` → notre pont (connector
+// 'bridged', source 'coopmaths', $lib/activities/bridges) CAPTE les réussites (Tier 2).
+// coopmaths.fr direct restait bloqué par leur anti-bot Cloudflare. Lien « élève » court (Flo).
+const MATHALEA_EXO =
+	'/alea/?uuid=bdb18&id=4A10&alea=PHVi&v=eleve&es=22110011&recorder=moodle&iframe=1';
 
 export const APP_ACTIVITIES: ActivityMeta[] = [
 	{
@@ -20,15 +20,13 @@ export const APP_ACTIVITIES: ActivityMeta[] = [
 		source: 'coopmaths',
 		label: 'MathALEA — exercices coopmaths',
 		emoji: '🎲',
-		description: 'Banque d’exercices aléatoires auto-corrigés (coopmaths). S’ouvre dans un nouvel onglet.',
+		description: 'Banque d’exercices aléatoires auto-corrigés (CoopMaths), embarquée — les réussites sont captées.',
 		kind: 'graded',
 		support: 'quiz',
-		embed: { originProd: 'https://coopmaths.fr', path: MATHALEA_EXO, mode: 'newtab', connector: 'none' },
+		embed: { originProd: 'https://rodeofly.github.io', path: MATHALEA_EXO, connector: 'bridged' },
 		taxo: { domaineKey: '00-transversal', domaineLabel: 'Transversal' },
 		competences: ['ca', 'ra'],
-		// Pas d'éval (capture déclarative seulement) : entraînement + divertissement,
-		// où l'élève auto-déclare compréhension/satisfaction par emojis (Tier 4).
-		rituels: ['rapido', 'zefor', 'divertissement'],
+		rituels: ['rapido', 'zefor', 'evaluation'],
 		keywords: ['coopmaths', 'mathalea', 'exercices', 'aléatoire', 'auto-correction', 'entraînement']
 	},
 	{
