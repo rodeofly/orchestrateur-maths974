@@ -1,0 +1,33 @@
+{
+	"name": "orchestrateur-maths974",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Orchestrateur Maths974 — le player du prof : compose et lance des parcours d'activités pédagogiques embarquées. Fondation v0 : auth + 5 rôles.",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"sync:m974": "node scripts/sync-m974.mjs"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.47.0"
+	},
+	"devDependencies": {
+		"@electric-sql/pglite": "^0.5.1",
+		"@sveltejs/adapter-static": "^3.0.8",
+		"@sveltejs/kit": "^2.57.0",
+		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"@types/node": "^25.9.1",
+		"svelte": "^5.55.2",
+		"svelte-check": "^4.4.6",
+		"typescript": "^6.0.2",
+		"vite": "^8.0.7",
+		"vitest": "^4.1.7"
+	}
+}

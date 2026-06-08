@@ -1,0 +1,53 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Les clés PUBLIC_* sont déclarées dans Settings > Secrets and variables > Actions.
+      # $env/static/public les INLINE au BUILD (pas au runtime).
+      - run: npm run build
+        env:
+          BASE_PATH: /orchestrateur-maths974
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+      # Garde anti-déploiement avec des clés factices.
+      - name: Vérifier l'absence de clés placeholder dans le build
+        run: |
+          if grep -rqi "placeholder.supabase.co" build/; then
+            echo "::error::URL Supabase placeholder détectée dans build/ — secrets manquants ?"
+            exit 1
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

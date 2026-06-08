@@ -1,0 +1,92 @@
+/* Reset minimal, mobile-first, accessible. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+* {
+	margin: 0;
+}
+html {
+	-webkit-text-size-adjust: 100%;
+	font-family: var(--font-sans);
+	color: var(--text);
+	background: var(--bg);
+}
+body {
+	min-height: 100dvh;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+h1,
+h2,
+h3 {
+	line-height: 1.15;
+	font-weight: 700;
+}
+a {
+	color: var(--role-accent);
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+img,
+svg {
+	display: block;
+	max-width: 100%;
+}
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+}
+
+/* Cibles tactiles WCAG (≥ 44px) + focus visible net. */
+button,
+a,
+[role='button'] {
+	min-height: 44px;
+}
+:focus-visible {
+	outline: 2px solid var(--role-accent);
+	outline-offset: 2px;
+	border-radius: var(--radius-sm);
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.skip-link {
+	position: absolute;
+	left: -999px;
+	top: var(--space-2);
+	z-index: var(--z-modal);
+	background: var(--surface);
+	padding: var(--space-2) var(--space-4);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow);
+}
+.skip-link:focus {
+	left: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		transition-duration: 0.001ms !important;
+	}
+}

@@ -1,0 +1,3 @@
+/* Barrel de styles globaux. Importé une fois par le +layout racine. */
+@import './tokens.css';
+@import './base.css';

@@ -1,0 +1,281 @@
+<script lang="ts">
+	// Éditeur de séance PAR RITUELS : le prof empile des rituels typés (rapido, zéfor,
+	// problèmes, éval, bilan, divertissement), remplit chacun d'activités du catalogue,
+	// puis assigne. Peut publier une séance comme MODÈLE Maths974, ou dupliquer un modèle.
+	import { onMount } from 'svelte';
+	import { getSupabase } from '$lib/supabase/client';
+	import { session } from '$auth/session.svelte';
+	import { ACTIVITIES, getActivity } from '$lib/activities/catalog';
+	import { RITUELS, getRituel, normalizeSteps, type RituelType, type SeanceStep } from '$lib/activities/rituels';
+	import Button from '$components/ui/Button.svelte';
+	import Card from '$components/ui/Card.svelte';
+	import EmptyState from '$components/ui/EmptyState.svelte';
+
+	type Parcours = { id: string; titre: string; steps: unknown; author_id: string | null; is_published: boolean };
+	type Classe = { id: string; nom: string };
+
+	const COMP_LABELS: Record<string, string> = { ch: 'chercher', mo: 'modéliser', re: 'représenter', ra: 'raisonner', ca: 'calculer', co: 'communiquer' };
+
+	let parcours = $state<Parcours[]>([]);
+	let classes = $state<Classe[]>([]);
+	let loading = $state(true);
+	let err = $state('');
+
+	// Composeur
+	let titre = $state('');
+	let steps = $state<SeanceStep[]>([]);
+	let creating = $state(false);
+
+	let choice = $state<Record<string, string>>({});
+	let msg = $state('');
+
+	const mine = $derived(parcours.filter((p) => p.author_id === session.userId));
+	const templates = $derived(parcours.filter((p) => p.is_published && p.author_id !== session.userId));
+
+	async function load() {
+		loading = true;
+		err = '';
+		try {
+			const sb = getSupabase();
+			const { data: p, error: pe } = await sb
+				.from('parcours')
+				.select('id,titre,steps,author_id,is_published')
+				.order('created_at', { ascending: false });
+			if (pe) throw pe;
+			parcours = (p ?? []) as Parcours[];
+			const { data: c, error: ce } = await sb.from('classes').select('id,nom').order('created_at');
+			if (ce) throw ce;
+			classes = (c ?? []) as Classe[];
+		} catch (e) {
+			err = e instanceof Error ? e.message : String(e);
+		} finally {
+			loading = false;
+		}
+	}
+
+	const addRituel = (type: RituelType) => (steps = [...steps, { rituel: type, activities: [] }]);
+	const removeRituel = (i: number) => (steps = steps.filter((_, j) => j !== i));
+	function moveUp(i: number) {
+		if (i === 0) return;
+		const s = [...steps];
+		[s[i - 1], s[i]] = [s[i], s[i - 1]];
+		steps = s;
+	}
+	function addActivity(i: number, id: string) {
+		if (!id) return;
+		steps = steps.map((s, j) => (j === i ? { ...s, activities: [...s.activities, id] } : s));
+	}
+	function removeActivity(i: number, k: number) {
+		steps = steps.map((s, j) => (j === i ? { ...s, activities: s.activities.filter((_, m) => m !== k) } : s));
+	}
+
+	const totalActivities = $derived(steps.reduce((n, s) => n + s.activities.length, 0));
+
+	async function create(e: SubmitEvent) {
+		e.preventDefault();
+		if (!titre.trim() || totalActivities === 0) return;
+		creating = true;
+		err = '';
+		const { error } = await getSupabase().from('parcours').insert({
+			titre: titre.trim(),
+			etablissement_id: session.tenantId,
+			author_id: session.userId,
+			steps,
+			is_published: false
+		});
+		if (error) err = error.message;
+		else {
+			titre = '';
+			steps = [];
+			await load();
+		}
+		creating = false;
+	}
+
+	async function assign(pId: string) {
+		const classId = choice[pId];
+		if (!classId) return;
+		msg = '';
+		const { error } = await getSupabase()
+			.from('parcours_assignments')
+			.insert({ parcours_id: pId, class_id: classId, assigned_by: session.userId });
+		msg = error ? `⚠ ${error.message}` : '✅ Séance assignée à la classe.';
+	}
+
+	async function togglePublish(p: Parcours) {
+		msg = '';
+		const { error } = await getSupabase().from('parcours').update({ is_published: !p.is_published }).eq('id', p.id);
+		if (error) msg = `⚠ ${error.message}`;
+		else await load();
+	}
+
+	async function duplicate(p: Parcours) {
+		msg = '';
+		const { error } = await getSupabase().from('parcours').insert({
+			titre: `${p.titre} (copie)`,
+			etablissement_id: session.tenantId,
+			author_id: session.userId,
+			steps: p.steps,
+			is_published: false
+		});
+		msg = error ? `⚠ ${error.message}` : '✅ Modèle dupliqué dans tes séances.';
+		if (!error) await load();
+	}
+
+	const labelOf = (id: string) => getActivity(id)?.label ?? id;
+	const emojiOf = (id: string) => getActivity(id)?.emoji ?? '🎲';
+	const ritCount = (p: Parcours) => normalizeSteps(p.steps).length;
+
+	onMount(load);
+</script>
+
+<h1>Séances & parcours</h1>
+<p class="sub">Compose une séance en empilant des rituels, puis assigne-la (ou pars d'un modèle Maths974).</p>
+
+<div class="cols">
+	<section>
+		<Card>
+			<h2>Nouvelle séance</h2>
+			<form onsubmit={create}>
+				<input bind:value={titre} placeholder="Titre (ex. Proportionnalité — séance 1)" aria-label="Titre" />
+
+				<p class="lbl">Ajouter un rituel :</p>
+				<div class="palette">
+					{#each RITUELS.filter((r) => r.type !== 'libre') as r (r.type)}
+						<button type="button" class="chip" title={r.description} onclick={() => addRituel(r.type)}>{r.emoji} {r.label}</button>
+					{/each}
+				</div>
+
+				<p class="lbl">Séance ({steps.length} rituel{steps.length > 1 ? 's' : ''}, {totalActivities} activité{totalActivities > 1 ? 's' : ''}) :</p>
+				{#if steps.length === 0}
+					<p class="muted">Empile des rituels ci-dessus, puis remplis-les d'activités.</p>
+				{:else}
+					<ol class="seq">
+						{#each steps as s, i (i)}
+							{@const def = getRituel(s.rituel)}
+							<li>
+								<div class="rit-head">
+									<span class="rit-n">{i + 1}</span>
+									<span class="rit-title">{def.emoji} {def.label}</span>
+									<span class="comps">
+										{#each def.competences as c (c)}<span class="comp">{COMP_LABELS[c] ?? c}</span>{/each}
+									</span>
+									<span class="rit-acts">
+										<button type="button" onclick={() => moveUp(i)} disabled={i === 0} title="Monter">↑</button>
+										<button type="button" onclick={() => removeRituel(i)} title="Retirer le rituel">✕</button>
+									</span>
+								</div>
+								<div class="rit-body">
+									{#if s.activities.length}
+										<ul class="acts">
+											{#each s.activities as a, k (k)}
+												<li><span>{emojiOf(a)} {labelOf(a)}</span><button type="button" onclick={() => removeActivity(i, k)} title="Retirer">✕</button></li>
+											{/each}
+										</ul>
+									{:else}
+										<p class="muted small">Rituel vide — ajoute une activité.</p>
+									{/if}
+									<select onchange={(e) => { addActivity(i, (e.currentTarget as HTMLSelectElement).value); (e.currentTarget as HTMLSelectElement).value = ''; }} aria-label="Ajouter une activité">
+										<option value="">+ ajouter une activité…</option>
+										{#each ACTIVITIES as a (a.id)}<option value={a.id}>{a.emoji} {a.label}</option>{/each}
+									</select>
+								</div>
+							</li>
+						{/each}
+					</ol>
+				{/if}
+
+				<Button type="submit">{creating ? 'Enregistrement…' : 'Créer la séance'}</Button>
+			</form>
+			{#if err}<p class="err">{err}</p>{/if}
+		</Card>
+	</section>
+
+	<section>
+		<h2>Mes séances</h2>
+		{#if loading}
+			<p class="muted">Chargement…</p>
+		{:else if mine.length === 0}
+			<EmptyState icon="🎬" title="Aucune séance" description="Compose ta première séance ci-contre." />
+		{:else}
+			<ul class="list">
+				{#each mine as p (p.id)}
+					<li>
+						<div class="head">
+							<span class="titre">{p.titre}</span>
+							<span class="meta">{ritCount(p)} rituel{ritCount(p) > 1 ? 's' : ''}</span>
+						</div>
+						<div class="assign">
+							<select bind:value={choice[p.id]} aria-label="Classe">
+								<option value="">— assigner à une classe —</option>
+								{#each classes as c (c.id)}<option value={c.id}>{c.nom}</option>{/each}
+							</select>
+							<button class="btn" onclick={() => assign(p.id)} disabled={!choice[p.id]}>Assigner</button>
+						</div>
+						<label class="pub">
+							<input type="checkbox" checked={p.is_published} onchange={() => togglePublish(p)} />
+							Publier comme modèle Maths974
+						</label>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+
+		{#if templates.length}
+			<h2 class="mt">Modèles Maths974</h2>
+			<ul class="list">
+				{#each templates as p (p.id)}
+					<li>
+						<div class="head">
+							<span class="titre">📚 {p.titre}</span>
+							<span class="meta">{ritCount(p)} rituel{ritCount(p) > 1 ? 's' : ''}</span>
+						</div>
+						<button class="btn ghost" onclick={() => duplicate(p)}>Dupliquer dans mes séances</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+		{#if msg}<p class="msg">{msg}</p>{/if}
+	</section>
+</div>
+
+<style>
+	.sub { color: var(--text-muted); margin: var(--space-2) 0 var(--space-4); }
+	.cols { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
+	h2 { font-size: 1.1rem; margin-bottom: var(--space-3); }
+	.mt { margin-top: var(--space-5); }
+	form { display: grid; gap: var(--space-3); }
+	input, select { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius); }
+	.lbl { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin: 0; }
+	.palette { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+	.chip { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-full); padding: 0.3rem 0.7rem; cursor: pointer; font-size: 0.85rem; }
+	.chip:hover { border-color: var(--role-accent); background: var(--role-accent-soft); }
+	.seq { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-3); }
+	.seq li { border: 1px solid var(--border); border-radius: var(--radius); background: var(--gray-50); overflow: hidden; }
+	.rit-head { display: flex; align-items: center; gap: var(--space-2); padding: 0.5rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+	.rit-n { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--role-accent); color: #fff; font-size: 0.8rem; font-weight: 700; flex: none; }
+	.rit-title { font-weight: 700; }
+	.comps { display: flex; gap: 0.25rem; flex: 1; flex-wrap: wrap; }
+	.comp { font-size: 0.68rem; font-weight: 700; color: var(--role-accent); background: var(--role-accent-soft); padding: 0.05rem 0.4rem; border-radius: var(--radius-full); }
+	.rit-acts button { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); width: 1.7rem; height: 1.7rem; min-height: 0; cursor: pointer; }
+	.rit-body { padding: 0.5rem; display: grid; gap: var(--space-2); }
+	.acts { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.25rem; }
+	.acts li { display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.25rem 0.5rem; font-size: 0.88rem; }
+	.acts li button { border: none; background: none; cursor: pointer; color: var(--text-muted); min-height: 0; }
+	.small { font-size: 0.82rem; }
+	.list { list-style: none; padding: 0; display: grid; gap: var(--space-3); }
+	.list li { padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+	.head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-2); }
+	.titre { font-weight: 700; }
+	.meta { font-size: 0.82rem; color: var(--text-muted); }
+	.assign { display: flex; gap: var(--space-2); }
+	.assign select { flex: 1; }
+	.btn { border: 1px solid var(--role-accent); background: var(--role-accent); color: #fff; border-radius: var(--radius); padding: 0.4rem 0.9rem; font-weight: 600; cursor: pointer; }
+	.btn.ghost { background: var(--surface); color: var(--text); border-color: var(--border); }
+	.btn:disabled { opacity: 0.5; cursor: default; }
+	.pub { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 0.85rem; color: var(--text-muted); }
+	.msg { margin-top: var(--space-2); font-weight: 600; }
+	.muted { color: var(--text-muted); }
+	.err { color: var(--danger); }
+	@media (min-width: 980px) { .cols { grid-template-columns: 1fr 1fr; } }
+</style>
