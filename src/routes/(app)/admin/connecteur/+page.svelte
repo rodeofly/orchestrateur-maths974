@@ -36,11 +36,12 @@
 	}
 </script>
 
-<h1>Aperçu d'une activité <span class="tag">test connecteur</span></h1>
+<h1>Test connecteur <span class="tag">diagnostic</span></h1>
 <p class="sub">
-	Outil de <strong>test</strong> : embarque une activité et observe ses tentatives arriver en direct.
-	⚠️ Cet aperçu <strong>n'enregistre rien</strong> — il sert à vérifier le branchement. Les vraies
-	réussites sont enregistrées quand un <strong>élève</strong> joue (depuis son espace).
+	Outil de <strong>diagnostic</strong> (admin) : embarque une activité — ou une URL brute — et observe
+	les <strong>événements du connecteur</strong> arriver en direct (ready / attempt / progress / exit).
+	⚠️ <strong>N'enregistre rien</strong> : sert à vérifier le branchement. Pour parcourir et prévisualiser
+	les activités côté prof, c'est la <strong>Bibliothèque</strong>.
 </p>
 
 <div class="controls">

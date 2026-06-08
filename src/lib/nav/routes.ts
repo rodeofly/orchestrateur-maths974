@@ -18,14 +18,14 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 	admin: [
 		{ href: '/admin', label: 'Tableau de bord' },
 		{ href: '/admin/etablissements', label: 'Établissements' },
-		{ href: '/admin/utilisateurs', label: 'Utilisateurs' }
+		{ href: '/admin/utilisateurs', label: 'Utilisateurs' },
+		{ href: '/admin/connecteur', label: 'Test connecteur' }
 	],
 	prof: [
 		{ href: '/prof', label: 'Mes classes' },
 		{ href: '/prof/annee', label: 'Progression' },
 		{ href: '/prof/bibliotheque', label: 'Bibliothèque' },
-		{ href: '/prof/cockpit', label: 'Cockpit' },
-		{ href: '/prof/seance', label: 'Aperçu activité' }
+		{ href: '/prof/cockpit', label: 'Cockpit' }
 	],
 	eleve: [
 		{ href: '/eleve', label: 'Mon espace' },

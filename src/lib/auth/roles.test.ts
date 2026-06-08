@@ -36,8 +36,8 @@ describe('roles', () => {
 
 	it('requiredRoleFor mappe les espaces privés et laisse le public ouvert', () => {
 		expect(requiredRoleFor('/admin')).toBe('admin');
-		expect(requiredRoleFor('/admin/utilisateurs')).toBe('admin');
-		expect(requiredRoleFor('/prof/seance/ABC')).toBe('prof');
+		expect(requiredRoleFor('/admin/connecteur')).toBe('admin');
+		expect(requiredRoleFor('/prof/annee/ABC')).toBe('prof');
 		expect(requiredRoleFor('/')).toBeNull();
 		expect(requiredRoleFor('/connexion')).toBeNull();
 		expect(requiredRoleFor('/confidentialite')).toBeNull();
