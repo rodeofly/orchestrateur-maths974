@@ -458,8 +458,8 @@
 	.seance .lbl { font-weight: 500; }
 	.edit { flex: 1; min-width: 0; font-size: 0.86rem; padding: 0.15rem 0.3rem; border: 1px solid var(--role-accent); border-radius: var(--radius); }
 	.badge { font-size: 0.68rem; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 0.05rem 0.45rem; white-space: nowrap; }
-	.acts { display: flex; gap: 0.1rem; flex: none; }
-	.ic { border: none; background: none; cursor: pointer; font-size: 0.82rem; padding: 0.15rem 0.25rem; border-radius: var(--radius-sm); text-decoration: none; line-height: 1; }
+	.acts { display: flex; align-items: center; gap: 0.1rem; flex: none; }
+	.ic { display: inline-flex; align-items: center; justify-content: center; border: none; background: none; cursor: pointer; font-size: 0.82rem; padding: 0.15rem 0.25rem; border-radius: var(--radius-sm); text-decoration: none; line-height: 1; }
 	.ic:hover { background: var(--gray-100); }
 	.ic.danger:hover { background: var(--gray-100); color: var(--danger); }
 	.children { margin-left: 1.3rem; padding-left: 0.5rem; border-left: 1px solid var(--border); display: grid; gap: 0.25rem; margin-top: 0.25rem; }
