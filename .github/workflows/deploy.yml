@@ -38,6 +38,10 @@ jobs:
             echo "::error::URL Supabase placeholder détectée dans build/ — secrets manquants ?"
             exit 1
           fi
+      # SPA sur GitHub Pages : 404.html = copie de la coquille → les liens profonds
+      # (/connexion, /prof/…) rechargés démarrent l'app au lieu du 404 de Pages.
+      - name: Fallback SPA (404.html)
+        run: cp build/index.html build/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build
