@@ -8,6 +8,7 @@
 	import { getActivity, activityUrl, type Activity } from '$lib/activities/catalog';
 	import { normalizeSteps, getRituel, withRituelCompetences, type RituelType } from '$lib/activities/rituels';
 	import RunnerFrame from '$components/runner/RunnerFrame.svelte';
+	import SelfValidation from '$components/runner/SelfValidation.svelte';
 	import { bridgeFor } from '$lib/activities/bridges';
 
 	const id = $derived(page.params.id ?? '');
@@ -71,6 +72,35 @@
 		if (!error) savedAt = { ...savedAt, [idx]: (savedAt[idx] ?? 0) + 1 };
 	}
 
+	// Validation DÉCLARATIVE (Tier 4) pour les étapes en app externe (newtab). Provenance
+	// dans outcome.source='self' ; pas de compétences remontées (≠ maîtrise captée).
+	let savingSelf = $state(false);
+	let selfDoneAt = $state<Record<number, boolean>>({});
+	async function onSelfValidate(r: { comprehension: number; satisfaction: number | null }) {
+		if (!current) return;
+		savingSelf = true;
+		const passed = r.comprehension >= 0.5;
+		const { error } = await getSupabase().from('attempts').insert({
+			student_id: session.userId,
+			app: current.source,
+			activity_id: current.id,
+			passed,
+			score: r.comprehension,
+			outcome: { passed, score: r.comprehension, source: 'self' },
+			measures: {
+				comprehension: r.comprehension,
+				...(r.satisfaction !== null ? { satisfaction: r.satisfaction } : {})
+			},
+			competencies: [],
+			kind: current.kind === 'consult' ? 'consult' : 'graded'
+		});
+		savingSelf = false;
+		if (!error) {
+			savedAt = { ...savedAt, [idx]: (savedAt[idx] ?? 0) + 1 };
+			selfDoneAt = { ...selfDoneAt, [idx]: true };
+		}
+	}
+
 	const next = () => { if (idx < plays.length - 1) idx += 1; };
 	const prev = () => { if (idx > 0) idx -= 1; };
 </script>
@@ -108,6 +138,10 @@
 				onattempt={onAttempt}
 			/>
 		{/key}
+		{#if current.embed.mode === 'newtab'}
+			<!-- App externe non captable → capture déclarative par emojis (Tier 4). -->
+			<SelfValidation onsubmit={onSelfValidate} submitting={savingSelf} done={selfDoneAt[idx] ?? false} />
+		{/if}
 		<div class="nav">
 			<button onclick={prev} disabled={idx === 0}>← Précédent</button>
 			{#if idx < plays.length - 1}

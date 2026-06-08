@@ -26,7 +26,9 @@ export const APP_ACTIVITIES: ActivityMeta[] = [
 		embed: { originProd: 'https://coopmaths.fr', path: MATHALEA_EXO, mode: 'newtab', connector: 'none' },
 		taxo: { domaineKey: '00-transversal', domaineLabel: 'Transversal' },
 		competences: ['ca', 'ra'],
-		rituels: ['rapido', 'zefor', 'evaluation'],
+		// Pas d'éval (capture déclarative seulement) : entraînement + divertissement,
+		// où l'élève auto-déclare compréhension/satisfaction par emojis (Tier 4).
+		rituels: ['rapido', 'zefor', 'divertissement'],
 		keywords: ['coopmaths', 'mathalea', 'exercices', 'aléatoire', 'auto-correction', 'entraînement']
 	},
 	{

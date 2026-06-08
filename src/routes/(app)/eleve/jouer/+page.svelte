@@ -2,6 +2,7 @@
 	// L'élève choisit une activité dans le CATALOGUE, la joue embarquée, et chaque
 	// tentative est ENREGISTRÉE en base (RLS : student_id = auth.uid()).
 	import RunnerFrame from '$components/runner/RunnerFrame.svelte';
+	import SelfValidation from '$components/runner/SelfValidation.svelte';
 	import { getSupabase } from '$lib/supabase/client';
 	import { session } from '$auth/session.svelte';
 	import { ACTIVITIES, activityUrl, type Activity } from '$lib/activities/catalog';
@@ -10,6 +11,8 @@
 	let selected = $state<Activity | null>(null);
 	let saved = $state(0);
 	let lastErr = $state('');
+	let savingSelf = $state(false);
+	let selfDone = $state(false);
 
 	type AttemptResult = {
 		app: string;
@@ -24,6 +27,7 @@
 		selected = a;
 		saved = 0;
 		lastErr = '';
+		selfDone = false;
 	}
 
 	async function onAttempt(p: unknown) {
@@ -43,6 +47,38 @@
 			});
 		if (error) lastErr = error.message;
 		else saved += 1;
+	}
+
+	// Validation DÉCLARATIVE (Tier 4) pour les apps externes non captables. La provenance
+	// vit dans outcome.source = 'self' (≠ kind, qui décrit le type d'activité) ; on NE
+	// remonte PAS de compétences (ne pas gonfler la maîtrise avec du déclaratif).
+	async function onSelfValidate(r: { comprehension: number; satisfaction: number | null }) {
+		if (!selected) return;
+		savingSelf = true;
+		lastErr = '';
+		const passed = r.comprehension >= 0.5;
+		const { error } = await getSupabase()
+			.from('attempts')
+			.insert({
+				student_id: session.userId,
+				app: selected.source,
+				activity_id: selected.id,
+				passed,
+				score: r.comprehension,
+				outcome: { passed, score: r.comprehension, source: 'self' },
+				measures: {
+					comprehension: r.comprehension,
+					...(r.satisfaction !== null ? { satisfaction: r.satisfaction } : {})
+				},
+				competencies: [],
+				kind: selected.kind === 'consult' ? 'consult' : 'graded'
+			});
+		savingSelf = false;
+		if (error) lastErr = error.message;
+		else {
+			saved += 1;
+			selfDone = true;
+		}
 	}
 </script>
 
@@ -81,6 +117,10 @@
 			onattempt={onAttempt}
 		/>
 	{/key}
+	{#if selected.embed.mode === 'newtab'}
+		<!-- App externe non captable → capture déclarative par emojis (Tier 4). -->
+		<SelfValidation onsubmit={onSelfValidate} submitting={savingSelf} done={selfDone} />
+	{/if}
 {/if}
 
 <style>
