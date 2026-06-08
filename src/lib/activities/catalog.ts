@@ -3,6 +3,7 @@
 // Cf. docs/BIBLIOTHEQUE.md.
 import type { ActivityMeta } from './types';
 import gsManifest from './manifests/gs.json';
+import { APP_ACTIVITIES } from './sources/apps';
 
 export type Activity = ActivityMeta; // alias rétro-compat (les écrans importent `type Activity`)
 
@@ -34,10 +35,12 @@ const gsActs: ActivityMeta[] = (gsManifest as { activities: ActivityMeta[] }).ac
 	embed: { ...a.embed, originDev: gsOrigin.dev, originProd: gsOrigin.prod }
 }));
 
-export const ACTIVITIES: ActivityMeta[] = [...HAND, ...gsActs];
+export const ACTIVITIES: ActivityMeta[] = [...HAND, ...APP_ACTIVITIES, ...gsActs];
 
 export function activityUrl(a: ActivityMeta): string {
-	const origin = (import.meta.env.DEV ? a.embed.originDev : a.embed.originProd) ?? '';
+	// Repli sur l'origine prod si pas de serveur de dev déclaré (apps déjà déployées).
+	const origin =
+		(import.meta.env.DEV ? a.embed.originDev : a.embed.originProd) ?? a.embed.originProd ?? '';
 	return origin + a.embed.path;
 }
 
