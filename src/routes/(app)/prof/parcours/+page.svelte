@@ -4,6 +4,7 @@
 	// puis assigne. Peut publier une séance comme MODÈLE Maths974, ou dupliquer un modèle.
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { base } from '$app/paths';
 	import { getSupabase } from '$lib/supabase/client';
 	import { session } from '$auth/session.svelte';
 	import { getActivity } from '$lib/activities/catalog';
@@ -168,8 +169,9 @@
 	onMount(load);
 </script>
 
+<p class="back"><a href={`${base}/prof/annee`}>← Progression</a></p>
 <h1>Séances & parcours</h1>
-<p class="sub">Compose une séance en empilant des rituels, puis assigne-la (ou pars d'un modèle Maths974).</p>
+<p class="sub">Édite une séance (rituels + activités) puis assigne-la. Tu y arrives depuis la <a href={`${base}/prof/annee`}>progression</a> (🔧 sur une séance).</p>
 
 <section class="composer">
 	<button type="button" class="composer-toggle" class:open={composerOpen} onclick={toggleComposer} aria-expanded={composerOpen}>
@@ -286,7 +288,10 @@
 {/if}
 
 <style>
+	.back { margin: 0 0 var(--space-2); }
+	.back a { color: var(--role-accent); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
 	.sub { color: var(--text-muted); margin: var(--space-2) 0 var(--space-4); }
+	.sub a { color: var(--role-accent); }
 	.composer { margin-bottom: var(--space-4); }
 	.composer-toggle { width: 100%; text-align: left; border: 1px dashed var(--role-accent); background: var(--role-accent-soft); color: var(--role-accent); border-radius: var(--radius); padding: 0.55rem 0.9rem; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
 	.composer-toggle .ccaret { display: inline-block; width: 1rem; }
