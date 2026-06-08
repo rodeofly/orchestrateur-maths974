@@ -23,6 +23,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 	prof: [
 		{ href: '/prof', label: 'Mes classes' },
 		{ href: '/prof/parcours', label: 'Séances' },
+		{ href: '/prof/bibliotheque', label: 'Bibliothèque' },
 		{ href: '/prof/cockpit', label: 'Cockpit' },
 		{ href: '/prof/seance', label: 'Aperçu activité' }
 	],
