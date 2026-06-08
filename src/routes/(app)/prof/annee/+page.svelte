@@ -297,8 +297,122 @@
 		}
 	}
 
+	// ── GLISSER-COPIER entre deux classes (vue côte à côte) ──
+	let compareId = $state('');
+	const compareName = $derived(classes.find((c) => c.id === compareId)?.nom ?? '');
+	let bAnneeId = $state('');
+	let bPeriodes = $state<Periode[]>([]);
+	let bSequences = $state<Sequence[]>([]);
+	let bSeances = $state<Seance[]>([]);
+	let copyMsg = $state('');
+
+	async function loadCompare(cid: string) {
+		bPeriodes = []; bSequences = []; bSeances = []; bAnneeId = ''; copyMsg = '';
+		if (!cid) return;
+		const { data: ann } = await sb().from('annees_scolaires').select('id').eq('class_id', cid).order('created_at', { ascending: false }).limit(1);
+		const aId = (ann as { id: string }[] | null)?.[0]?.id;
+		if (!aId) return;
+		bAnneeId = aId;
+		const { data: ps } = await sb().from('periodes').select('id,annee_id,label,ordre,term,semaine_debut,semaine_fin,couleur').eq('annee_id', aId);
+		bPeriodes = (ps ?? []) as Periode[];
+		const pids = bPeriodes.map((p) => p.id);
+		const { data: sq } = pids.length ? await sb().from('sequences').select('id,periode_id,titre,ordre').in('periode_id', pids) : { data: [] };
+		bSequences = (sq ?? []) as Sequence[];
+		const sids = bSequences.map((s) => s.id);
+		const { data: se } = sids.length ? await sb().from('parcours').select('id,titre,sequence_id,ordre').in('sequence_id', sids) : { data: [] };
+		bSeances = (se ?? []) as Seance[];
+	}
+	$effect(() => { loadCompare(compareId); });
+
+	type Pane = 'A' | 'B';
+	const paneData = (pane: Pane) => (pane === 'A'
+		? { per: periodes, seq: sequences, sea: seances }
+		: { per: bPeriodes, seq: bSequences, sea: bSeances });
+	const pPeriodes = (pane: Pane) => [...paneData(pane).per].sort((a, b) => a.ordre - b.ordre);
+	const pSeqOf = (pane: Pane, pid: string) => paneData(pane).seq.filter((s) => s.periode_id === pid).sort((a, b) => a.ordre - b.ordre);
+	const pSeaOf = (pane: Pane, sid: string) => paneData(pane).sea.filter((s) => s.sequence_id === sid).sort((a, b) => a.ordre - b.ordre);
+
+	let cdrag = $state<{ kind: 'sequence' | 'seance'; id: string; pane: Pane } | null>(null);
+	let cover = $state<string | null>(null);
+	const cend = () => { cdrag = null; cover = null; };
+	function cStart(kind: 'sequence' | 'seance', id: string, pane: Pane, e: DragEvent) {
+		cdrag = { kind, id, pane };
+		if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', id); }
+	}
+	function cAllow(e: DragEvent, id: string, pane: Pane, kinds: ('sequence' | 'seance')[]) {
+		if (cdrag && cdrag.pane !== pane && kinds.includes(cdrag.kind)) { e.preventDefault(); e.stopPropagation(); cover = id; }
+	}
+	async function reloadPane(pane: Pane) { if (pane === 'A') await loadPlan(selId); else await loadCompare(compareId); }
+
+	// Copier une SÉANCE (avec ses rituels) dans une séquence de l'autre classe.
+	async function copySeanceTo(targetPane: Pane, targetSeqId: string) {
+		if (!cdrag || cdrag.kind !== 'seance' || cdrag.pane === targetPane) return cend();
+		const { data: full } = await sb().from('parcours').select('titre,steps').eq('id', cdrag.id).single();
+		const ordre = pSeaOf(targetPane, targetSeqId).length;
+		await sb().from('parcours').insert({
+			author_id: session.userId, etablissement_id: session.tenantId ?? null,
+			titre: (full as { titre: string } | null)?.titre ?? 'Séance', steps: (full as { steps: unknown } | null)?.steps ?? [],
+			sequence_id: targetSeqId, ordre, is_published: false
+		});
+		await reloadPane(targetPane);
+		copyMsg = '✅ Séance copiée.';
+		cend();
+	}
+	// Copier une SÉQUENCE (avec toutes ses séances) dans une période de l'autre classe.
+	async function copySequenceTo(targetPane: Pane, targetPeriodeId: string) {
+		if (!cdrag || cdrag.kind !== 'sequence' || cdrag.pane === targetPane) return cend();
+		const srcSeq = paneData(cdrag.pane).seq.find((s) => s.id === cdrag!.id); if (!srcSeq) return cend();
+		const ordre = pSeqOf(targetPane, targetPeriodeId).length;
+		const { data: ns } = await sb().from('sequences').insert({ periode_id: targetPeriodeId, author_id: session.userId, titre: srcSeq.titre, ordre }).select('id').single();
+		const newSeqId = (ns as { id: string } | null)?.id;
+		if (newSeqId) {
+			const srcSeas = pSeaOf(cdrag.pane, srcSeq.id);
+			if (srcSeas.length) {
+				const { data: full } = await sb().from('parcours').select('id,titre,steps,ordre').in('id', srcSeas.map((s) => s.id));
+				const rows = (full ?? []).map((f: { titre: string; steps: unknown; ordre: number }) => ({
+					author_id: session.userId, etablissement_id: session.tenantId ?? null,
+					titre: f.titre, steps: f.steps, sequence_id: newSeqId, ordre: f.ordre, is_published: false
+				}));
+				if (rows.length) await sb().from('parcours').insert(rows);
+			}
+		}
+		await reloadPane(targetPane);
+		copyMsg = '✅ Séquence copiée (avec ses séances).';
+		cend();
+	}
+
 	loadClasses();
 </script>
+
+{#snippet copyTree(pane: 'A' | 'B')}
+	{#each pPeriodes(pane) as p (p.id)}
+		<div class="cnode cper" role="treeitem" aria-selected="false" tabindex="-1" aria-label={p.label} class:cover={cover === p.id} style="--h:{p.couleur ?? 215}"
+			ondragover={(e) => cAllow(e, p.id, pane, ['sequence'])} ondragleave={() => (cover = null)}
+			ondrop={(e) => { e.stopPropagation(); copySequenceTo(pane, p.id); }}>
+			<div class="crow"><span class="dot"></span><b>{p.label}</b></div>
+			<div class="cchildren">
+				{#each pSeqOf(pane, p.id) as s (s.id)}
+					<div class="cnode cseq" role="treeitem" aria-selected="false" tabindex="-1" aria-label={s.titre} class:cover={cover === s.id}
+						draggable="true" ondragstart={(e) => cStart('sequence', s.id, pane, e)}
+						ondragover={(e) => cAllow(e, s.id, pane, ['seance'])} ondragleave={() => (cover = null)}
+						ondrop={(e) => { e.stopPropagation(); copySeanceTo(pane, s.id); }}>
+						<div class="crow"><span class="grip" title="Glisser pour copier">⠿</span> <span class="ct">{s.titre}</span></div>
+						<div class="cchildren">
+							{#each pSeaOf(pane, s.id) as sa (sa.id)}
+								<div class="cnode csea" role="treeitem" aria-selected="false" tabindex="-1" aria-label={sa.titre} draggable="true"
+									ondragstart={(e) => { e.stopPropagation(); cStart('seance', sa.id, pane, e); }}>
+									<div class="crow"><span class="grip" title="Glisser pour copier">⠿</span> 🎬 <span class="ct">{sa.titre}</span></div>
+								</div>
+							{/each}
+							{#if pSeaOf(pane, s.id).length === 0}<p class="cempty">— vide —</p>{/if}
+						</div>
+					</div>
+				{/each}
+				{#if pSeqOf(pane, p.id).length === 0}<p class="cempty">— aucune séquence —</p>{/if}
+			</div>
+		</div>
+	{/each}
+{/snippet}
 
 <div class="head">
 	<h1>Progression</h1>
@@ -348,10 +462,36 @@
 	<p class="muted">La classe <strong>{cls?.nom}</strong> n'a pas encore de progression. Clique <strong>＋ Nouvelle année</strong> — elle arrivera pré-remplie, à ajuster.</p>
 {:else}
 	<div class="viewtabs">
-		<button class:on={viewMode === 'arbre'} onclick={() => (viewMode = 'arbre')}>🌳 Arborescence</button>
-		<button class:on={viewMode === 'frise'} onclick={() => (viewMode = 'frise')}>📅 Frise</button>
+		<button class:on={viewMode === 'arbre' && !compareId} onclick={() => { viewMode = 'arbre'; compareId = ''; }}>🌳 Arborescence</button>
+		<button class:on={viewMode === 'frise' && !compareId} onclick={() => { viewMode = 'frise'; compareId = ''; }}>📅 Frise</button>
+		{#if classes.length > 1}
+			<select class="cmpsel" class:on={!!compareId} value={compareId} onchange={(e) => (compareId = e.currentTarget.value)} aria-label="Copier avec une autre classe">
+				<option value="">⧉ Copier avec…</option>
+				{#each classes.filter((c) => c.id !== classId) as c (c.id)}<option value={c.id}>{c.nom}</option>{/each}
+			</select>
+		{/if}
 	</div>
-	{#if viewMode === 'frise'}
+	{#if compareId}
+		<div class="copyhint">
+			⧉ Glisse une <b>séquence</b> ou une <b>séance</b> d'une classe vers l'autre pour la <b>copier</b>.
+			<button class="closecmp" onclick={() => (compareId = '')}>✕ Fermer</button>
+			{#if copyMsg}<span class="cmsg">{copyMsg}</span>{/if}
+		</div>
+		<div class="copyview">
+			<div class="pane">
+				<h3>🏫 {cls?.nom}</h3>
+				<div class="ptree" role="tree" aria-label={cls?.nom}>{@render copyTree('A')}</div>
+			</div>
+			<div class="pane">
+				<h3>🏫 {compareName}</h3>
+				{#if bAnneeId}
+					<div class="ptree" role="tree" aria-label={compareName}>{@render copyTree('B')}</div>
+				{:else}
+					<p class="muted">Cette classe n'a pas encore de progression — duplique d'abord vers elle (barre ci-dessus), ou crée-lui une année.</p>
+				{/if}
+			</div>
+		</div>
+	{:else if viewMode === 'frise'}
 	<div class="frise" style="--w:{W}px; width:{annee.nb_semaines * W + 2}px">
 		<!-- Bandeau trimestres/semestres -->
 		<div class="terms" style="height:1.6rem">
@@ -563,4 +703,27 @@
 	.children { margin-left: 1.3rem; padding-left: 0.5rem; border-left: 1px solid var(--border); display: grid; gap: 0.25rem; margin-top: 0.25rem; }
 	.empty-c { color: var(--text-muted); font-size: 0.76rem; font-style: italic; padding: 0.2rem 0.3rem; margin: 0; }
 	.add-per-row { justify-self: start; border: 1px dashed var(--role-accent); background: var(--role-accent-soft); color: var(--role-accent); border-radius: var(--radius); padding: 0.35rem 0.8rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; margin-top: 0.3rem; }
+
+	/* ── Glisser-copier entre deux classes ── */
+	.viewtabs .cmpsel { border: none; background: transparent; border-radius: var(--radius-full); padding: 0.35rem 0.7rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+	.viewtabs .cmpsel.on { background: var(--surface); color: var(--role-accent); box-shadow: var(--shadow-sm); }
+	.copyhint { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin: var(--space-2) 0 var(--space-3); padding: 0.5rem 0.7rem; background: var(--role-accent-soft); border: 1px solid var(--role-accent); border-radius: var(--radius); font-size: 0.85rem; }
+	.closecmp { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); padding: 0.25rem 0.6rem; cursor: pointer; font-weight: 600; }
+	.cmsg { color: var(--success); font-weight: 700; }
+	.copyview { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: start; }
+	.pane { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: var(--space-3); min-width: 0; }
+	.pane h3 { margin: 0 0 var(--space-2); font-size: 0.95rem; }
+	.ptree { display: grid; gap: 0.3rem; }
+	.cnode { border-radius: var(--radius); }
+	.cnode.cover { outline: 2px dashed var(--role-accent); outline-offset: 1px; background: var(--role-accent-soft); }
+	.crow { display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.4rem; font-size: 0.82rem; min-width: 0; }
+	.crow .ct { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.cper > .crow { background: hsl(var(--h) 70% 96%); border: 1px solid hsl(var(--h) 60% 82%); border-left: 3px solid hsl(var(--h) 60% 55%); border-radius: var(--radius); font-weight: 800; color: hsl(var(--h) 55% 32%); }
+	.cseq { cursor: grab; }
+	.cseq > .crow { background: var(--gray-50); border: 1px solid var(--border); border-radius: var(--radius); font-weight: 700; }
+	.csea { cursor: grab; }
+	.csea > .crow { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+	.cchildren { margin-left: 1rem; padding-left: 0.4rem; border-left: 1px solid var(--border); display: grid; gap: 0.25rem; margin-top: 0.25rem; }
+	.cempty { color: var(--text-muted); font-size: 0.72rem; font-style: italic; margin: 0; padding: 0.1rem 0.3rem; }
+	@media (max-width: 720px) { .copyview { grid-template-columns: 1fr; } }
 </style>
