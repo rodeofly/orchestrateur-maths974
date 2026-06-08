@@ -33,7 +33,10 @@ export function mount(container, opts = {}) {
   let childOrigin = null;
 
   const iframe = document.createElement('iframe');
-  iframe.src = withParams(opts.url, params, session);
+  // App native : on injecte m974/session + params URL-safe. App « bridged » (adapter) :
+  // elle ne parle PAS notre protocole — on garde son URL telle quelle (sinon nos params
+  // polluent la sienne et peuvent faire trébucher son serveur). Cf. Tier 2.
+  iframe.src = opts.adapter ? opts.url : withParams(opts.url, params, session);
   iframe.style.border = '0';
   iframe.style.width = opts.width || '100%';
   iframe.style.height = opts.height || '100%';
@@ -41,8 +44,10 @@ export function mount(container, opts = {}) {
   if (opts.title) iframe.title = opts.title;
   if (opts.allowFullscreen) iframe.allow = 'fullscreen';
   if (opts.sandbox) iframe.setAttribute('sandbox', opts.sandbox);
-  // Pas de Referer vers l'app embarquée : empêche toute fuite d'URL/contexte
-  // de l'orchestrateur (et de ses params) vers une app tierce. RGPD/mineurs.
+  // Par défaut « no-referrer » : aucune fuite d'URL/contexte de l'orchestrateur vers
+  // l'app tierce (RGPD/mineurs). Mais certains serveurs (anti-hotlink) refusent une
+  // requête sans Referer → on autorise un override (ex. bridged : 'strict-origin-when-
+  // cross-origin' = on ne livre QUE l'origine, jamais le chemin ni les params).
   iframe.referrerPolicy = opts.referrerPolicy || 'no-referrer';
   container.appendChild(iframe);
 

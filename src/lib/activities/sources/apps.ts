@@ -8,10 +8,9 @@ const RODEOFLY = 'https://rodeofly.github.io';
 
 // MathALEA (coopmaths) — exemple d'app TIERCE captée par PONT (Tier 2). Lancée avec
 // ?recorder=moodle, elle poste { action:'mathalea:score', resultsByExercice } : on le
-// traduit via l'adaptateur `mathalea` ($lib/activities/bridges). L'exercice ci-dessous est
-// un lien élève complet et valide ; la sélection d'exercices côté prof viendra ensuite.
-const MATHALEA_EXO =
-	'/alea/?uuid=5f115&id=6G8A-1&n=3&d=10&s=1&s2=1&s3=true&s4=1&i=1&cd=1&alea=WSYf&v=eleve&es=0111001&recorder=moodle&iframe=1';
+// traduit via l'adaptateur ($lib/activities/bridges). Lien « élève » court (format Flo) ;
+// `recorder=moodle` active la remontée du score. La sélection d'exercices côté prof viendra.
+const MATHALEA_EXO = '/alea/?uuid=bdb18&id=4A10&alea=PHVi&v=eleve&es=22110011&recorder=moodle&iframe=1';
 
 export const APP_ACTIVITIES: ActivityMeta[] = [
 	{

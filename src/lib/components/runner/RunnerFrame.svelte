@@ -11,6 +11,7 @@
 		title = 'activité',
 		height = '80vh',
 		adapter,
+		referrerPolicy,
 		onready,
 		onattempt,
 		onprogress,
@@ -24,6 +25,9 @@
 		/** Adaptateur « bridged » (Tier 2) : traduit le protocole d'une app tierce en
 		 *  AttemptResult, relayé via onattempt. Cf. $lib/activities/bridges. */
 		adapter?: (data: unknown, origin: string) => unknown;
+		/** Politique de Referer de l'iframe. Par défaut no-referrer (RGPD) ; pour une app
+		 *  bridgée on livre l'origine seule (certains serveurs refusent le no-referer). */
+		referrerPolicy?: ReferrerPolicy;
 		onready?: (p: unknown) => void;
 		onattempt?: (p: unknown) => void;
 		onprogress?: (p: unknown) => void;
@@ -34,7 +38,10 @@
 	let activity: { on: Function; command: Function; destroy: Function } | null = null;
 
 	onMount(() => {
-		activity = mount(container, { url, params, allowOrigin, title, adapter });
+		// App bridgée (adapter présent) sans politique explicite → on livre l'origine
+		// seule, pour les serveurs tiers qui refusent une requête sans Referer (ex. coopmaths).
+		const refPol = referrerPolicy ?? (adapter ? 'strict-origin-when-cross-origin' : undefined);
+		activity = mount(container, { url, params, allowOrigin, title, adapter, referrerPolicy: refPol });
 		if (onready) activity.on('ready', onready);
 		if (onattempt) activity.on('attempt', onattempt);
 		if (onprogress) activity.on('progress', onprogress);
