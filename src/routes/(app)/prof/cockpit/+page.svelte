@@ -19,6 +19,7 @@
 	let source = $state('blank');
 	let annot = $state(false);
 	let show = $state({ chrono: false, tirage: false, calc: false });
+	let docked = $state(false); // dock replié en pastille déplaçable (mode tableau/nav)
 
 	type Play = { rituel: RituelType; activityId: string };
 	let parcoursList = $state<{ id: string; titre: string; steps: unknown }[]>([]);
@@ -85,24 +86,33 @@
 		{/if}
 	</div>
 
-	<div class="toolbar">
-		<select onchange={onSource} bind:value={source} title="Fond" aria-label="Fond">
-			<option value="blank">⬜ Tableau blanc</option>
-			<optgroup label="Activité">
-				{#each ACTIVITIES as a (a.id)}<option value={a.id}>{a.emoji} {a.label}</option>{/each}
-			</optgroup>
-			{#if parcoursList.length}
-				<optgroup label="Mes séances">
-					{#each parcoursList as p (p.id)}<option value={`seance:${p.id}`}>🎬 {p.titre}</option>{/each}
+	{#if docked}
+		<!-- Dock replié : pastille déplaçable (glisser par le mors ⠿, clic 🧰 pour rouvrir). -->
+		<div class="dock-mini" use:draggable={{ handle: '.grip' }}>
+			<span class="grip" title="Déplacer">⠿</span>
+			<button class="mini-btn" onclick={() => (docked = false)} title="Rouvrir les outils">🧰</button>
+		</div>
+	{:else}
+		<div class="toolbar">
+			<select onchange={onSource} bind:value={source} title="Fond" aria-label="Fond">
+				<option value="blank">⬜ Tableau blanc</option>
+				<optgroup label="Activité">
+					{#each ACTIVITIES as a (a.id)}<option value={a.id}>{a.emoji} {a.label}</option>{/each}
 				</optgroup>
-			{/if}
-		</select>
-		<button class:on={annot} onclick={() => (annot = !annot)}>✏️ Annoter</button>
-		<button class:on={show.chrono} onclick={() => (show.chrono = !show.chrono)}>⏱ Chrono</button>
-		<button class:on={show.tirage} onclick={() => (show.tirage = !show.tirage)}>🎲 Tirage</button>
-		<button class:on={show.calc} onclick={() => (show.calc = !show.calc)}>🧮 Calc</button>
-		<button onclick={toggleFullscreen} title="Projeter">⛶ Plein écran</button>
-	</div>
+				{#if parcoursList.length}
+					<optgroup label="Mes séances">
+						{#each parcoursList as p (p.id)}<option value={`seance:${p.id}`}>🎬 {p.titre}</option>{/each}
+					</optgroup>
+				{/if}
+			</select>
+			<button class:on={annot} onclick={() => (annot = !annot)}>✏️ Annoter</button>
+			<button class:on={show.chrono} onclick={() => (show.chrono = !show.chrono)}>⏱ Chrono</button>
+			<button class:on={show.tirage} onclick={() => (show.tirage = !show.tirage)}>🎲 Tirage</button>
+			<button class:on={show.calc} onclick={() => (show.calc = !show.calc)}>🧮 Calc</button>
+			<button onclick={toggleFullscreen} title="Projeter">⛶ Plein écran</button>
+			<button class="collapse" onclick={() => (docked = true)} title="Réduire en pastille">⌄</button>
+		</div>
+	{/if}
 
 	{#if show.chrono}
 		<div class="panel" use:draggable={{ handle: '.ph' }} style="top:4.5rem; left:1rem">
@@ -139,6 +149,11 @@
 	.toolbar { position: absolute; bottom: var(--space-3); left: 50%; transform: translateX(-50%); display: flex; gap: var(--space-2); align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 0.4rem 0.7rem; box-shadow: var(--shadow); z-index: 30; flex-wrap: wrap; }
 	.toolbar select, .toolbar button { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.85rem; min-height: 0; }
 	.toolbar button.on { background: var(--role-accent); color: #fff; border-color: var(--role-accent); }
+	.toolbar .collapse { font-size: 1rem; line-height: 1; padding: 0.35rem 0.55rem; color: var(--text-muted); }
+	/* Pastille du dock replié : flottante, déplaçable, au-dessus de tout. */
+	.dock-mini { position: absolute; bottom: var(--space-3); left: var(--space-3); z-index: 30; display: flex; align-items: center; gap: 0.15rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 0.2rem 0.3rem; box-shadow: var(--shadow-lg); }
+	.dock-mini .grip { cursor: grab; touch-action: none; color: var(--text-muted); font-size: 1.1rem; padding: 0 0.2rem; user-select: none; }
+	.dock-mini .mini-btn { border: none; background: var(--role-accent); color: #fff; width: 2.4rem; height: 2.4rem; border-radius: 50%; font-size: 1.2rem; cursor: pointer; min-height: 0; display: grid; place-items: center; }
 	.panel { position: absolute; z-index: 40; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
 	.ph { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 0.4rem 0.7rem; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: grab; user-select: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--gray-50); }
 	.ph button { border: none; background: none; cursor: pointer; color: var(--text-muted); min-height: 0; font-size: 0.9rem; }
