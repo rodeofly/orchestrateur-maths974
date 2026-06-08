@@ -23,12 +23,13 @@ describe('bridges — adaptateurs « bridged » (Tier 2)', () => {
 				resultsByExercice: [
 					{ uuid: 'aaaa', numberOfPoints: 3, numberOfQuestions: 4, state: 'done', alea: 'Z1', duration: 9000 },
 					{ uuid: 'bbbb', numberOfPoints: 0, numberOfQuestions: 2, state: 'done' },
-					{ uuid: 'cccc', numberOfPoints: 1, numberOfQuestions: 1 } // pas 'done' → ignoré
+					{ uuid: 'cccc', numberOfPoints: 1, numberOfQuestions: 1 }, // scoré (sans state) → capté
+					{ uuid: 'dddd', title: 'non scoré' } // pas de numberOfQuestions → ignoré
 				]
 			},
 			'https://coopmaths.fr'
 		);
-		expect(out).toHaveLength(2);
+		expect(out).toHaveLength(3); // les 3 exos scorés (dddd ignoré faute de numberOfQuestions)
 		const a = out![0];
 		expect(a.app).toBe('mathalea');
 		expect(a.activityId).toBe('mathalea:aaaa');
@@ -39,6 +40,8 @@ describe('bridges — adaptateurs « bridged » (Tier 2)', () => {
 		// 0/2 → échec
 		expect(out![1].outcome.passed).toBe(false);
 		expect(out![1].outcome.score).toBe(0);
+		// cccc : 1/1 capté même sans state:'done'
+		expect(out![2].outcome.score).toBe(1);
 	});
 
 	it('borne le score dans [0,1] et gère 0 question', () => {
