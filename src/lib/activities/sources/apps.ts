@@ -67,7 +67,8 @@ export const APP_ACTIVITIES: ActivityMeta[] = [
 		description: 'Labyrinthe, tortue, algo, motifs et équations en blocs (Blockly).',
 		kind: 'graded',
 		support: 'jeu',
-		embed: { originProd: `${FTOBE}/blokaly974/`, path: '', connector: 'none' },
+		// Pont @maths974/embed reçu (src/core/embed/ : émet l'AttemptResult à la victoire) → CAPTE.
+		embed: { originProd: `${FTOBE}/blokaly974/`, path: '', connector: 'm974' },
 		taxo: { domaineKey: '06-pensee-informatique', domaineLabel: 'Pensée informatique' },
 		competences: ['ra'],
 		rituels: ['zefor', 'divertissement'],
